@@ -13,7 +13,7 @@
   let micError = $state("");
 
   let mediaRecorder: MediaRecorder | null = null;
-  let chunks: BlobPart[] = [];
+  let chunks: Blob[] = [];
 
   function cleanupUrl() {
     if (recordedUrl) {
