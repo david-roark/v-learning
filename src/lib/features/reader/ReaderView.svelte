@@ -3,8 +3,6 @@
     BookOpenText,
     ChevronLeft,
     ChevronRight,
-    Eye,
-    FileText,
     Maximize2,
     MoveHorizontal,
     Plus,
@@ -44,10 +42,10 @@
   let sectionIndex = $state(0);
   let pdfSession = $state<PdfSession | null>(null);
   let pdfPageNum = $state(1);
-  let pdfViewMode = $state<"text" | "canvas">("text");
   let pdfFitMode = $state<PdfFitMode>("fit-width");
   let pdfZoom = $state(1.25);
   let pdfCanvas = $state<HTMLCanvasElement | null>(null);
+  let pdfTextLayer = $state<HTMLDivElement | null>(null);
   let pdfContainer = $state<HTMLDivElement | null>(null);
   let editing = $state(false);
   let parsingFile = $state(false);
@@ -75,29 +73,38 @@
   const totalItems = $derived(pdfSession ? pdfSession.numPages : sections.length);
   const currentPos = $derived(pdfSession ? pdfPageNum - 1 : sectionIndex);
 
-  async function loadPdfPage(pageNum: number) {
+  function loadPdfPage(pageNum: number) {
     if (!pdfSession || pageNum < 1 || pageNum > pdfSession.numPages) return;
     pdfPageNum = pageNum;
     selectedToken = null;
     lookupResult = null;
-    articleText = await pdfSession.getPageText(pageNum);
   }
 
   $effect(() => {
-    if (pdfSession && pdfViewMode === "canvas" && pdfCanvas && pdfContainer) {
+    if (pdfSession && !editing && pdfCanvas && pdfContainer) {
       const opts = {
         scale: pdfZoom,
         fitMode: pdfFitMode,
         containerWidth: pdfContainer.clientWidth,
         containerHeight: pdfContainer.clientHeight,
       };
-      void pdfSession.renderPage(pdfPageNum, pdfCanvas, opts).then((actualScale) => {
+      void pdfSession.renderPage(pdfPageNum, pdfCanvas, pdfTextLayer, opts).then((actualScale) => {
         if (pdfFitMode !== "custom") {
           pdfZoom = Math.round(actualScale * 100) / 100;
         }
       });
     }
   });
+
+  function handlePdfTextSelect(e: MouseEvent) {
+    if (!pdfSession || editing || !pdfTextLayer?.contains(e.target as Node)) return;
+    const sel = window.getSelection()?.toString().trim();
+    if (!sel || sel.length > 60) return;
+    const firstWord = sel.match(/[A-Za-z][A-Za-z'-]*/)?.[0];
+    if (!firstWord) return;
+    manualQuery = firstWord;
+    void lookupAndSelect(firstWord);
+  }
 
   function adjustZoom(delta: number) {
     pdfFitMode = "custom";
@@ -196,8 +203,7 @@
         pdfSession = session;
         sections = [];
         bookTitle = file.name.replace(/\.pdf$/i, "");
-        pdfViewMode = "text";
-        await loadPdfPage(1);
+        loadPdfPage(1);
       } else {
         const raw = await file.text();
         const isSub = /\.(srt|vtt)$/i.test(name);
@@ -218,6 +224,8 @@
   });
 </script>
 
+<svelte:window onmouseup={handlePdfTextSelect} />
+
 <div class="grid gap-4 lg:grid-cols-12">
   <div class="flex flex-col space-y-3 lg:col-span-8 xl:col-span-9">
     <div
@@ -234,33 +242,6 @@
       </div>
 
       <div class="flex items-center gap-2">
-        {#if pdfSession}
-          <div class="flex rounded-xl border border-zinc-700 bg-zinc-950 p-0.5 text-xs">
-            <button
-              type="button"
-              onclick={() => (pdfViewMode = "text")}
-              class="inline-flex items-center gap-1 rounded-lg px-2.5 py-1 transition {pdfViewMode ===
-              'text'
-                ? 'bg-indigo-600 text-white'
-                : 'text-zinc-400 hover:text-zinc-200'}"
-            >
-              <FileText class="h-3.5 w-3.5" />
-              Text Mining
-            </button>
-            <button
-              type="button"
-              onclick={() => (pdfViewMode = "canvas")}
-              class="inline-flex items-center gap-1 rounded-lg px-2.5 py-1 transition {pdfViewMode ===
-              'canvas'
-                ? 'bg-indigo-600 text-white'
-                : 'text-zinc-400 hover:text-zinc-200'}"
-            >
-              <Eye class="h-3.5 w-3.5" />
-              Trang gốc
-            </button>
-          </div>
-        {/if}
-
         <label
           class="inline-flex cursor-pointer items-center gap-1.5 rounded-xl border border-zinc-700 px-3 py-1.5 text-xs text-zinc-300 hover:bg-zinc-800"
         >
@@ -330,7 +311,7 @@
           </span>
         </div>
 
-        {#if pdfSession && pdfViewMode === "canvas"}
+        {#if pdfSession}
           <div class="flex items-center gap-1.5">
             <button
               type="button"
@@ -390,41 +371,36 @@
         placeholder="Dán đoạn văn hoặc bài báo tiếng Anh vào đây..."
         class="h-[calc(100vh-13.5rem)] w-full rounded-2xl border border-zinc-700 bg-zinc-900 p-4 text-sm leading-relaxed text-zinc-100 focus:border-indigo-500 focus:outline-none"
       ></textarea>
-    {:else if pdfSession && pdfViewMode === "canvas"}
+    {:else if pdfSession}
       <div
         bind:this={pdfContainer}
         class="flex h-[calc(100vh-13.5rem)] items-start justify-center overflow-auto rounded-2xl border border-zinc-800 bg-zinc-950 p-4"
       >
-        <canvas bind:this={pdfCanvas} class="rounded-lg shadow-lg"></canvas>
+        <div class="relative inline-block shadow-lg">
+          <canvas bind:this={pdfCanvas} class="block rounded-lg"></canvas>
+          <div bind:this={pdfTextLayer} class="textLayer"></div>
+        </div>
       </div>
     {:else}
       <div
         class="h-[calc(100vh-13.5rem)] overflow-y-auto rounded-2xl border border-zinc-800 bg-zinc-900/70 p-6 text-base leading-8 text-zinc-200"
       >
-        {#if pdfSession && !displayText}
-          <p class="py-10 text-center text-sm text-zinc-500">
-            Trang này không có lớp chữ (hoặc là trang ảnh). Bạn có thể chuyển sang chế độ <strong
-              >Trang gốc</strong
-            > ở góc trên để xem.
-          </p>
-        {:else}
-          {#each tokens as tok}
-            {#if tok.isWord}
-              <button
-                type="button"
-                onclick={() => handleWordClick(tok)}
-                class="rounded px-0.5 transition hover:bg-indigo-500/25 hover:text-indigo-200 {selectedToken?.text ===
-                tok.text
-                  ? 'bg-indigo-600/30 text-indigo-200'
-                  : ''}"
-              >
-                {tok.text}
-              </button>
-            {:else}
-              <span>{tok.text}</span>
-            {/if}
-          {/each}
-        {/if}
+        {#each tokens as tok}
+          {#if tok.isWord}
+            <button
+              type="button"
+              onclick={() => handleWordClick(tok)}
+              class="rounded px-0.5 transition hover:bg-indigo-500/25 hover:text-indigo-200 {selectedToken?.text ===
+              tok.text
+                ? 'bg-indigo-600/30 text-indigo-200'
+                : ''}"
+            >
+              {tok.text}
+            </button>
+          {:else}
+            <span>{tok.text}</span>
+          {/if}
+        {/each}
       </div>
     {/if}
   </div>

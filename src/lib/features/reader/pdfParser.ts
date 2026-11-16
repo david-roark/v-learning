@@ -1,6 +1,5 @@
 import * as pdfjsLib from "pdfjs-dist";
 import workerSrc from "pdfjs-dist/build/pdf.worker.min.mjs?url";
-import { joinPdfLines } from "./textParser";
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = workerSrc;
 
@@ -20,10 +19,10 @@ export interface PdfRenderOptions {
 
 export interface PdfSession {
   numPages: number;
-  getPageText: (pageNum: number) => Promise<string>;
   renderPage: (
     pageNum: number,
     canvas: HTMLCanvasElement,
+    textLayerEl: HTMLDivElement | null,
     options: PdfRenderOptions,
   ) => Promise<number>;
   destroy: () => Promise<void>;
@@ -32,41 +31,12 @@ export interface PdfSession {
 export async function openPdfSession(buffer: ArrayBuffer): Promise<PdfSession> {
   const loadingTask = pdfjsLib.getDocument({ data: new Uint8Array(buffer) });
   const doc = await loadingTask.promise;
-  const cache = new Map<number, string>();
   let activeRenderTask: { cancel: () => void; promise: Promise<void> } | null = null;
-
-  async function getPageText(pageNum: number): Promise<string> {
-    const cached = cache.get(pageNum);
-    if (cached !== undefined) return cached;
-
-    const page = await doc.getPage(pageNum);
-    const content = await page.getTextContent();
-    const lines: string[] = [];
-    let currentLine = "";
-
-    for (const item of content.items) {
-      if ("str" in item) {
-        currentLine += item.str;
-        if (item.hasEOL) {
-          lines.push(currentLine);
-          currentLine = "";
-        } else {
-          currentLine += " ";
-        }
-      }
-    }
-    if (currentLine.trim()) {
-      lines.push(currentLine);
-    }
-
-    const joined = joinPdfLines(lines);
-    cache.set(pageNum, joined);
-    return joined;
-  }
 
   async function renderPage(
     pageNum: number,
     canvas: HTMLCanvasElement,
+    textLayerEl: HTMLDivElement | null,
     options: PdfRenderOptions,
   ): Promise<number> {
     if (activeRenderTask) {
@@ -118,12 +88,30 @@ export async function openPdfSession(buffer: ArrayBuffer): Promise<PdfSession> {
       if (activeRenderTask === task) activeRenderTask = null;
     }
 
+    if (textLayerEl) {
+      textLayerEl.innerHTML = "";
+      textLayerEl.style.width = `${baseViewport.width}px`;
+      textLayerEl.style.height = `${baseViewport.height}px`;
+      textLayerEl.style.setProperty("--total-scale-factor", String(effectiveScale));
+      textLayerEl.style.setProperty("--scale-factor", String(effectiveScale));
+      try {
+        const textContent = await page.getTextContent();
+        const textLayer = new pdfjsLib.TextLayer({
+          textContentSource: textContent,
+          container: textLayerEl,
+          viewport: baseViewport,
+        });
+        await textLayer.render();
+      } catch {
+        // ignore text layer errors on image-only pages
+      }
+    }
+
     return effectiveScale;
   }
 
   return {
     numPages: doc.numPages,
-    getPageText,
     renderPage,
     destroy: () => loadingTask.destroy(),
   };

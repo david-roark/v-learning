@@ -149,11 +149,9 @@
 
           {#if activeTab === "dictionary"}
             <DictionaryView {decks} onCardAdded={refreshDashboard} />
-          {:else if activeTab === "reader"}
-            <ReaderView {decks} onCardAdded={refreshDashboard} />
           {:else if activeTab === "analytics"}
             <AnalyticsView />
-          {:else}
+          {:else if activeTab === "decks"}
             <div class="mb-6 grid grid-cols-3 gap-4">
               <div class="rounded-2xl border border-zinc-800/80 bg-zinc-900/60 p-4">
                 <div class="flex items-center gap-2 text-xs font-medium text-zinc-400">
@@ -188,6 +186,10 @@
               />
             {/if}
           {/if}
+
+          <div class={activeTab === "reader" ? "" : "hidden"}>
+            <ReaderView {decks} onCardAdded={refreshDashboard} />
+          </div>
         </div>
       </main>
     </div>
