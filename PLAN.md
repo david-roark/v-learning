@@ -164,11 +164,11 @@ CREATE TABLE review_logs (
 ## 4. Lộ Trình Phát Triển (Roadmap)
 
 ### Giai đoạn 1: MVP — Dùng được hàng ngày (Tuần 1–3)
-- [ ] Khởi tạo dự án **Tauri v2 + SQLite** và cấu trúc thư mục.
-- [ ] Xây dựng Schema SQLite & tích hợp thư viện **FSRS**.
-- [ ] CRUD Bộ thẻ (Decks) & Tạo thẻ thủ công (Vocabulary + Cloze).
-- [ ] Màn hình ôn tập mượt mà hỗ trợ đầy đủ phím tắt (`Space`, `1-4`, `R`).
-- [ ] Thống kê cơ bản (số thẻ đã học hôm nay, thẻ đến hạn).
+- [x] Khởi tạo dự án **Tauri v2 + SQLite** và cấu trúc thư mục.
+- [x] Xây dựng Schema SQLite & tích hợp thư viện **FSRS**.
+- [x] CRUD Bộ thẻ (Decks) & Tạo thẻ thủ công (Vocabulary + Cloze).
+- [x] Màn hình ôn tập mượt mà hỗ trợ đầy đủ phím tắt (`Space`, `1-4`, `R`).
+- [x] Thống kê cơ bản (số thẻ đã học hôm nay, thẻ đến hạn).
 
 ### Giai đoạn 2: Sức Mạnh Desktop & Tự Động Hóa (Tuần 4–6)
 - [ ] Nhúng từ điển Offline (SQLite FTS5) + Auto-fill IPA, nghĩa, ví dụ.
