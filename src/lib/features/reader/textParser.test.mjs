@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { stripSubtitleMetadata, tokenizeWithSentences } from "./textParser.ts";
+import { joinPdfLines, stripSubtitleMetadata, tokenizeWithSentences } from "./textParser.ts";
 
 test("tokenizeWithSentences extracts words and maps each word to its sentence", () => {
   const sample = "Learning English is pragmatic. Consistency makes you resilient!";
@@ -25,4 +25,9 @@ test("stripSubtitleMetadata cleans srt and vtt timestamps and tags", () => {
 00:00:04,000 --> 00:00:06,000
 This is pragmatic.`;
   assert.equal(stripSubtitleMetadata(srt), "Hello world. This is pragmatic.");
+});
+
+test("joinPdfLines merges hyphenated words across line breaks", () => {
+  const lines = ["Smartphones have become ubiqui-", "tous in modern life."];
+  assert.equal(joinPdfLines(lines), "Smartphones have become ubiquitous in modern life.");
 });

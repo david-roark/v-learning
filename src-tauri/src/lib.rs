@@ -7,13 +7,15 @@ mod dictionary;
 mod error;
 mod media;
 mod models;
+mod reader;
 mod srs;
 mod sync;
 
 use tauri::Manager;
 
 use commands::{
-    ai_cmd, analytics_cmd, anki_cmd, deck_cmd, dict_cmd, media_cmd, note_cmd, study_cmd, sync_cmd,
+    ai_cmd, analytics_cmd, anki_cmd, deck_cmd, dict_cmd, media_cmd, note_cmd, reader_cmd,
+    study_cmd, sync_cmd,
 };
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -60,6 +62,7 @@ pub fn run() {
             sync_cmd::save_webdav_settings,
             sync_cmd::sync_webdav_push,
             sync_cmd::sync_webdav_pull,
+            reader_cmd::parse_epub,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -4,6 +4,22 @@ export interface TextToken {
   sentence: string;
 }
 
+export function joinPdfLines(lines: string[]): string {
+  let result = "";
+  for (const raw of lines) {
+    const line = raw.trim();
+    if (!line) continue;
+    if (result.endsWith("-") && /^[a-z]/.test(line)) {
+      result = result.slice(0, -1) + line;
+    } else if (result) {
+      result += " " + line;
+    } else {
+      result = line;
+    }
+  }
+  return result.replace(/\s+/g, " ").trim();
+}
+
 export function stripSubtitleMetadata(raw: string): string {
   return raw
     .replace(/\r\n/g, "\n")
