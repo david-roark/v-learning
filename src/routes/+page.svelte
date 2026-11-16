@@ -6,6 +6,7 @@
     Cloud,
     Flame,
     Layers,
+    Palette,
     Plus,
     Settings,
     Sparkles,
@@ -14,6 +15,7 @@
   import { onMount } from "svelte";
   import AiSettingsModal from "$lib/features/ai-practice/AiSettingsModal.svelte";
   import AnalyticsView from "$lib/features/analytics/AnalyticsView.svelte";
+  import AppearanceModal from "$lib/features/appearance/AppearanceModal.svelte";
   import NoteFormModal from "$lib/features/card-editor/components/NoteFormModal.svelte";
   import { decksApi } from "$lib/features/decks/api";
   import DeckList from "$lib/features/decks/components/DeckList.svelte";
@@ -36,6 +38,7 @@
   let showDeckModal = $state(false);
   let showAiSettings = $state(false);
   let showSyncModal = $state(false);
+  let showAppearance = $state(false);
   let addCardTarget = $state<DeckWithStats | null>(null);
   let manageNotesTarget = $state<DeckWithStats | null>(null);
   let apkgMsg = $state("");
@@ -146,6 +149,15 @@
             Thống kê
           </button>
         </div>
+
+        <button
+          type="button"
+          onclick={() => (showAppearance = true)}
+          title="Giao diện, Font & Cỡ chữ"
+          class="rounded-xl border border-zinc-800 bg-zinc-900 p-2 text-zinc-400 hover:text-zinc-200"
+        >
+          <Palette class="h-4 w-4" />
+        </button>
 
         <button
           type="button"
@@ -267,3 +279,5 @@
   onClose={() => (showSyncModal = false)}
   onRestored={refreshDashboard}
 />
+
+<AppearanceModal open={showAppearance} onClose={() => (showAppearance = false)} />
