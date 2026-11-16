@@ -14,6 +14,7 @@
   } from "@lucide/svelte";
   import { onDestroy } from "svelte";
   import { notesApi } from "$lib/features/card-editor/api";
+  import { decksApi } from "$lib/features/decks/api";
   import { dictionaryApi } from "$lib/features/dictionary/api";
   import { playWordAudio } from "$lib/shared/audio";
   import Select from "$lib/shared/components/Select.svelte";
@@ -47,10 +48,14 @@
   let pdfCanvas = $state<HTMLCanvasElement | null>(null);
   let pdfTextLayer = $state<HTMLDivElement | null>(null);
   let pdfContainer = $state<HTMLDivElement | null>(null);
+  let textContainer = $state<HTMLDivElement | null>(null);
+  let readerRoot = $state<HTMLDivElement | null>(null);
   let editing = $state(false);
   let parsingFile = $state(false);
 
   let selectedDeckId = $state("");
+  let creatingDeck = $state(false);
+  let newDeckName = $state("");
   let manualQuery = $state("");
   let contextSentence = $state("");
   let selectedToken = $state<TextToken | null>(null);
@@ -78,6 +83,7 @@
     pdfPageNum = pageNum;
     selectedToken = null;
     lookupResult = null;
+    if (pdfContainer) pdfContainer.scrollTop = 0;
   }
 
   $effect(() => {
@@ -113,13 +119,43 @@
 
   function goToPosition(idx: number) {
     if (pdfSession) {
-      void loadPdfPage(idx + 1);
+      loadPdfPage(idx + 1);
       return;
     }
     if (idx < 0 || idx >= sections.length) return;
     sectionIndex = idx;
     selectedToken = null;
     lookupResult = null;
+    if (textContainer) textContainer.scrollTop = 0;
+  }
+
+  function handleReaderKeydown(e: KeyboardEvent) {
+    if (!readerRoot || readerRoot.offsetParent === null || editing || totalItems === 0) return;
+    if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+    if (e.key === "ArrowLeft" && currentPos > 0) {
+      e.preventDefault();
+      goToPosition(currentPos - 1);
+    } else if (e.key === "ArrowRight" && currentPos < totalItems - 1) {
+      e.preventDefault();
+      goToPosition(currentPos + 1);
+    }
+  }
+
+  async function handleQuickCreateDeck(e: Event) {
+    e.preventDefault();
+    const name = newDeckName.trim();
+    if (!name) return;
+    error = "";
+    try {
+      const created = await decksApi.create({ name });
+      newDeckName = "";
+      creatingDeck = false;
+      selectedDeckId = created.id;
+      statusMsg = `Đã tạo bộ thẻ "${created.name}"!`;
+      onCardAdded();
+    } catch (err) {
+      error = String(err);
+    }
   }
 
   async function lookupAndSelect(word: string, sentence?: string) {
@@ -224,9 +260,9 @@
   });
 </script>
 
-<svelte:window onmouseup={handlePdfTextSelect} />
+<svelte:window onmouseup={handlePdfTextSelect} onkeydown={handleReaderKeydown} />
 
-<div class="grid gap-4 lg:grid-cols-12">
+<div bind:this={readerRoot} class="grid gap-4 lg:grid-cols-12">
   <div class="flex flex-col space-y-3 lg:col-span-8 xl:col-span-9">
     <div
       class="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-zinc-800 bg-zinc-900/60 px-4 py-3"
@@ -383,6 +419,7 @@
       </div>
     {:else}
       <div
+        bind:this={textContainer}
         class="h-[calc(100vh-13.5rem)] overflow-y-auto rounded-2xl border border-zinc-800 bg-zinc-900/70 p-6 text-base leading-8 text-zinc-200"
       >
         {#each tokens as tok}
@@ -411,12 +448,43 @@
   >
     <h3 class="text-sm font-semibold text-white">Tra cứu nhanh</h3>
 
-    {#if decks.length > 0}
-      <Select
-        options={decks.map((d) => ({ value: d.id, label: d.name }))}
-        bind:value={selectedDeckId}
-        prefix="Lưu vào: "
-      />
+    <div class="flex items-center gap-1.5">
+      {#if decks.length > 0}
+        <Select
+          options={decks.map((d) => ({ value: d.id, label: d.name }))}
+          bind:value={selectedDeckId}
+          prefix="Lưu vào: "
+          class="flex-1"
+        />
+      {:else}
+        <span class="flex-1 text-xs text-zinc-400">Chưa có bộ thẻ nào</span>
+      {/if}
+      <button
+        type="button"
+        onclick={() => (creatingDeck = !creatingDeck)}
+        title="Tạo nhanh bộ thẻ mới"
+        class="shrink-0 rounded-xl border border-zinc-700 p-2 text-zinc-300 hover:border-indigo-500 hover:text-indigo-300"
+      >
+        <Plus class="h-3.5 w-3.5" />
+      </button>
+    </div>
+
+    {#if creatingDeck}
+      <form onsubmit={handleQuickCreateDeck} class="flex gap-1.5">
+        <input
+          type="text"
+          bind:value={newDeckName}
+          placeholder="Tên bộ thẻ mới..."
+          class="flex-1 rounded-xl border border-zinc-700 bg-zinc-950 px-2.5 py-1.5 text-xs text-white placeholder-zinc-500 focus:border-indigo-500 focus:outline-none"
+        />
+        <button
+          type="submit"
+          disabled={!newDeckName.trim()}
+          class="rounded-xl bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-indigo-500 disabled:opacity-40"
+        >
+          Tạo
+        </button>
+      </form>
     {/if}
 
     <form onsubmit={handleManualSearch} class="flex gap-1.5">
