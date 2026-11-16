@@ -3,6 +3,7 @@
     BookOpenText,
     ChevronLeft,
     ChevronRight,
+    Globe,
     Maximize2,
     MoveHorizontal,
     Plus,
@@ -22,6 +23,7 @@
   import type { DeckWithStats, DictionaryEntry } from "$lib/shared/types";
   import { openPdfSession, type BookSection, type PdfFitMode, type PdfSession } from "./pdfParser";
   import { stripSubtitleMetadata, tokenizeWithSentences, type TextToken } from "./textParser";
+  import YouTubePlayer, { type TranscriptLine } from "./YouTubePlayer.svelte";
 
   interface Props {
     decks: DeckWithStats[];
@@ -31,6 +33,20 @@
   interface EpubBook {
     title: string;
     chapters: BookSection[];
+  }
+
+  interface ArticleBlock {
+    tag: "h1" | "h2" | "h3" | "p" | "blockquote" | "li";
+    text: string;
+  }
+
+  interface WebReaderResult {
+    kind: "article" | "youtube";
+    title: string;
+    articleText: string | null;
+    articleBlocks: ArticleBlock[];
+    youtubeId: string | null;
+    transcript: TranscriptLine[];
   }
 
   let { decks, onCardAdded }: Props = $props();
@@ -52,6 +68,11 @@
   let readerRoot = $state<HTMLDivElement | null>(null);
   let editing = $state(false);
   let parsingFile = $state(false);
+  let showUrlBar = $state(false);
+  let webUrl = $state("");
+  let youtubeId = $state<string | null>(null);
+  let youtubeTranscript = $state<TranscriptLine[]>([]);
+  let articleBlocks = $state<ArticleBlock[]>([]);
 
   let selectedDeckId = $state("");
   let creatingDeck = $state(false);
@@ -215,6 +236,39 @@
     }
   }
 
+  async function handleLoadUrl(e: Event) {
+    e.preventDefault();
+    const target = webUrl.trim();
+    if (!target || parsingFile) return;
+
+    parsingFile = true;
+    error = "";
+    statusMsg = "";
+    editing = false;
+    await clearPdfSession();
+    sections = [];
+    youtubeId = null;
+    youtubeTranscript = [];
+    articleBlocks = [];
+
+    try {
+      const res = await invokeCmd<WebReaderResult>("load_reader_url", { url: target });
+      bookTitle = res.title;
+      if (res.kind === "youtube" && res.youtubeId) {
+        youtubeId = res.youtubeId;
+        youtubeTranscript = res.transcript;
+      } else {
+        articleText = res.articleText ?? "";
+        articleBlocks = res.articleBlocks ?? [];
+      }
+      showUrlBar = false;
+    } catch (err) {
+      error = String(err);
+    } finally {
+      parsingFile = false;
+    }
+  }
+
   async function handleFileUpload(e: Event) {
     const input = e.currentTarget as HTMLInputElement;
     const file = input.files?.[0];
@@ -224,6 +278,9 @@
     error = "";
     statusMsg = "";
     editing = false;
+    youtubeId = null;
+    youtubeTranscript = [];
+    articleBlocks = [];
     await clearPdfSession();
 
     try {
@@ -278,6 +335,16 @@
       </div>
 
       <div class="flex items-center gap-2">
+        <button
+          type="button"
+          onclick={() => (showUrlBar = !showUrlBar)}
+          class="inline-flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs transition {showUrlBar
+            ? 'border-indigo-500 bg-indigo-500/15 text-indigo-300'
+            : 'border-zinc-700 text-zinc-300 hover:bg-zinc-800'}"
+        >
+          <Globe class="h-3.5 w-3.5" />
+          Mở URL
+        </button>
         <label
           class="inline-flex cursor-pointer items-center gap-1.5 rounded-xl border border-zinc-700 px-3 py-1.5 text-xs text-zinc-300 hover:bg-zinc-800"
         >
@@ -296,6 +363,8 @@
             await clearPdfSession();
             sections = [];
             bookTitle = "";
+            youtubeId = null;
+            youtubeTranscript = [];
             editing = !editing;
           }}
           class="rounded-xl border border-zinc-700 px-3 py-1.5 text-xs font-medium text-zinc-200 hover:bg-zinc-800"
@@ -304,6 +373,28 @@
         </button>
       </div>
     </div>
+
+    {#if showUrlBar}
+      <form
+        onsubmit={handleLoadUrl}
+        class="flex items-center gap-2 rounded-xl border border-zinc-800 bg-zinc-900/60 px-3 py-2"
+      >
+        <Globe class="h-4 w-4 shrink-0 text-indigo-400" />
+        <input
+          type="url"
+          bind:value={webUrl}
+          placeholder="Dán link bài báo hoặc YouTube (https://...)..."
+          class="flex-1 bg-transparent text-xs text-white placeholder-zinc-500 focus:outline-none"
+        />
+        <button
+          type="submit"
+          disabled={parsingFile || !webUrl.trim()}
+          class="rounded-lg bg-indigo-600 px-3 py-1 text-xs font-medium text-white hover:bg-indigo-500 disabled:opacity-40"
+        >
+          {parsingFile ? "Đang tải..." : "Mở"}
+        </button>
+      </form>
+    {/if}
 
     {#if totalItems > 0}
       {@const navOptions = pdfSession
@@ -407,6 +498,13 @@
         placeholder="Dán đoạn văn hoặc bài báo tiếng Anh vào đây..."
         class="h-[calc(100vh-13.5rem)] w-full rounded-2xl border border-zinc-700 bg-zinc-900 p-4 text-sm leading-relaxed text-zinc-100 focus:border-indigo-500 focus:outline-none"
       ></textarea>
+    {:else if youtubeId}
+      <YouTubePlayer
+        videoId={youtubeId}
+        transcript={youtubeTranscript}
+        selectedWord={selectedToken?.text ?? ""}
+        onWordClick={handleWordClick}
+      />
     {:else if pdfSession}
       <div
         bind:this={pdfContainer}
@@ -418,11 +516,8 @@
         </div>
       </div>
     {:else}
-      <div
-        bind:this={textContainer}
-        class="h-[calc(100vh-13.5rem)] overflow-y-auto rounded-2xl border border-zinc-800 bg-zinc-900/70 p-6 text-base leading-8 text-zinc-200"
-      >
-        {#each tokens as tok}
+      {#snippet renderTokens(tokenList: TextToken[])}
+        {#each tokenList as tok}
           {#if tok.isWord}
             <button
               type="button"
@@ -438,6 +533,49 @@
             <span>{tok.text}</span>
           {/if}
         {/each}
+      {/snippet}
+
+      <div
+        bind:this={textContainer}
+        class="h-[calc(100vh-13.5rem)] overflow-y-auto rounded-2xl border border-zinc-800 bg-zinc-900/70 p-6 text-base leading-8 text-zinc-200"
+      >
+        {#if articleBlocks.length > 0 && sections.length === 0}
+          <article class="mx-auto max-w-3xl space-y-4">
+            {#each articleBlocks as block}
+              {@const blockTokens = tokenizeWithSentences(block.text)}
+              {#if block.tag === "h1"}
+                <h1 class="text-2xl leading-snug font-bold text-white">
+                  {@render renderTokens(blockTokens)}
+                </h1>
+              {:else if block.tag === "h2"}
+                <h2
+                  class="mt-6 border-b border-zinc-800 pb-1.5 text-xl font-semibold text-zinc-100"
+                >
+                  {@render renderTokens(blockTokens)}
+                </h2>
+              {:else if block.tag === "h3"}
+                <h3 class="mt-4 text-lg font-semibold text-zinc-200">
+                  {@render renderTokens(blockTokens)}
+                </h3>
+              {:else if block.tag === "blockquote"}
+                <blockquote class="border-l-2 border-indigo-500/60 pl-4 text-zinc-300 italic">
+                  {@render renderTokens(blockTokens)}
+                </blockquote>
+              {:else if block.tag === "li"}
+                <div class="flex gap-2.5 pl-3">
+                  <span class="mt-0.5 text-indigo-400">•</span>
+                  <div class="flex-1">{@render renderTokens(blockTokens)}</div>
+                </div>
+              {:else}
+                <p class="leading-7 text-zinc-200">
+                  {@render renderTokens(blockTokens)}
+                </p>
+              {/if}
+            {/each}
+          </article>
+        {:else}
+          {@render renderTokens(tokens)}
+        {/if}
       </div>
     {/if}
   </div>

@@ -63,6 +63,7 @@ pub fn run() {
             sync_cmd::sync_webdav_push,
             sync_cmd::sync_webdav_pull,
             reader_cmd::parse_epub,
+            reader_cmd::load_reader_url,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
