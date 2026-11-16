@@ -46,6 +46,18 @@ pub fn create_note(conn: &mut Connection, input: CreateNoteInput) -> AppResult<N
         ));
     }
 
+    let duplicate: bool = conn
+        .query_row(
+            "SELECT EXISTS(SELECT 1 FROM notes WHERE deck_id = ?1 AND word = ?2 COLLATE NOCASE)",
+            params![input.deck_id, word],
+            |r| r.get(0),
+        )?;
+    if duplicate {
+        return Err(AppError::Validation(format!(
+            "Từ \"{word}\" đã tồn tại trong bộ thẻ này"
+        )));
+    }
+
     let now_ms = Utc::now().timestamp_millis();
     let note_type = match input.note_type.as_str() {
         "cloze" | "vocab" => input.note_type,

@@ -93,3 +93,36 @@ export interface DailyStats {
 }
 
 export type Rating = 1 | 2 | 3 | 4;
+
+export interface DictionaryEntry {
+  id: number;
+  word: string;
+  ipa: string | null;
+  pos: string | null;
+  meaningVi: string | null;
+  meaningEn: string | null;
+  exampleSentence: string | null;
+  audioUrl: string | null;
+  source: string;
+}
+
+export interface DictionaryPack {
+  id: string;
+  name: string;
+  description: string;
+  sizeHint: string;
+}
+
+export interface ImportReport {
+  inserted: number;
+  updated: number;
+  skipped: number;
+  totalAfter: number;
+}
+
+export interface ImportProgress {
+  stage: "downloading" | "importing" | "done";
+  current: number;
+  total: number;
+  message: string;
+}

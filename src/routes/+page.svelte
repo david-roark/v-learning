@@ -1,10 +1,12 @@
 <script lang="ts">
-  import { Flame, Layers, Plus, Sparkles } from "@lucide/svelte";
+  import { BookA, Flame, Layers, Plus, Sparkles } from "@lucide/svelte";
   import { onMount } from "svelte";
   import NoteFormModal from "$lib/features/card-editor/components/NoteFormModal.svelte";
   import { decksApi } from "$lib/features/decks/api";
   import DeckList from "$lib/features/decks/components/DeckList.svelte";
   import DeckModal from "$lib/features/decks/components/DeckModal.svelte";
+  import DeckNotesModal from "$lib/features/decks/components/DeckNotesModal.svelte";
+  import DictionaryView from "$lib/features/dictionary/components/DictionaryView.svelte";
   import { studyApi } from "$lib/features/study/api";
   import StudySession from "$lib/features/study/components/StudySession.svelte";
   import type { DailyStats, DeckWithStats } from "$lib/shared/types";
@@ -13,9 +15,11 @@
   let stats = $state<DailyStats>({ reviewedToday: 0, newLearnedToday: 0, dueRemaining: 0 });
   let loading = $state(true);
 
+  let activeTab = $state<"decks" | "dictionary">("decks");
   let activeDeck = $state<DeckWithStats | null>(null);
   let showDeckModal = $state(false);
   let addCardTarget = $state<DeckWithStats | null>(null);
+  let manageNotesTarget = $state<DeckWithStats | null>(null);
 
   async function refreshDashboard() {
     loading = true;
@@ -59,19 +63,48 @@
     </div>
 
     {#if !activeDeck}
-      <button
-        type="button"
-        onclick={() => (showDeckModal = true)}
-        class="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-indigo-500"
-      >
-        <Plus class="h-4 w-4" />
-        Bộ thẻ mới
-      </button>
+      <div class="flex items-center gap-3">
+        <div class="flex rounded-xl border border-zinc-800 bg-zinc-900 p-1 text-xs font-medium">
+          <button
+            type="button"
+            onclick={() => (activeTab = "decks")}
+            class="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 transition {activeTab === 'decks'
+              ? 'bg-zinc-800 text-white'
+              : 'text-zinc-400 hover:text-zinc-200'}"
+          >
+            <Layers class="h-3.5 w-3.5" />
+            Bộ thẻ
+          </button>
+          <button
+            type="button"
+            onclick={() => (activeTab = "dictionary")}
+            class="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 transition {activeTab === 'dictionary'
+              ? 'bg-zinc-800 text-white'
+              : 'text-zinc-400 hover:text-zinc-200'}"
+          >
+            <BookA class="h-3.5 w-3.5" />
+            Từ điển
+          </button>
+        </div>
+
+        {#if activeTab === "decks"}
+          <button
+            type="button"
+            onclick={() => (showDeckModal = true)}
+            class="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-indigo-500"
+          >
+            <Plus class="h-4 w-4" />
+            Bộ thẻ mới
+          </button>
+        {/if}
+      </div>
     {/if}
   </header>
 
   {#if activeDeck}
     <StudySession deck={activeDeck} onExit={handleExitStudy} />
+  {:else if activeTab === "dictionary"}
+    <DictionaryView {decks} onCardAdded={refreshDashboard} />
   {:else}
     <!-- Daily Stats Bar -->
     <div class="mb-8 grid grid-cols-3 gap-4">
@@ -102,6 +135,7 @@
         {decks}
         onStudy={(deck) => (activeDeck = deck)}
         onAddCard={(deck) => (addCardTarget = deck)}
+        onManageNotes={(deck) => (manageNotesTarget = deck)}
         onDelete={handleDeleteDeck}
         onCreateDeck={() => (showDeckModal = true)}
       />
@@ -122,5 +156,13 @@
     deckName={addCardTarget.name}
     onClose={() => (addCardTarget = null)}
     onSaved={refreshDashboard}
+  />
+{/if}
+
+{#if manageNotesTarget}
+  <DeckNotesModal
+    deck={manageNotesTarget}
+    onClose={() => (manageNotesTarget = null)}
+    onChanged={refreshDashboard}
   />
 {/if}

@@ -1,16 +1,17 @@
 <script lang="ts">
-  import { BookOpen, Play, Plus, Trash2 } from "@lucide/svelte";
+  import { BookOpen, List, Play, Plus, Trash2 } from "@lucide/svelte";
   import type { DeckWithStats } from "$lib/shared/types";
 
   interface Props {
     decks: DeckWithStats[];
     onStudy: (deck: DeckWithStats) => void;
     onAddCard: (deck: DeckWithStats) => void;
+    onManageNotes: (deck: DeckWithStats) => void;
     onDelete: (deck: DeckWithStats) => void;
     onCreateDeck: () => void;
   }
 
-  let { decks, onStudy, onAddCard, onDelete, onCreateDeck }: Props = $props();
+  let { decks, onStudy, onAddCard, onManageNotes, onDelete, onCreateDeck }: Props = $props();
 </script>
 
 {#if decks.length === 0}
@@ -81,6 +82,14 @@
           >
             <Plus class="h-3.5 w-3.5" />
             Thẻ
+          </button>
+          <button
+            type="button"
+            onclick={() => onManageNotes(deck)}
+            title="Xem danh sách thẻ"
+            class="inline-flex items-center rounded-xl border border-zinc-700 p-2 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200"
+          >
+            <List class="h-3.5 w-3.5" />
           </button>
         </div>
       </div>

@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { X } from "@lucide/svelte";
+  import { Sparkles, X } from "@lucide/svelte";
+  import { dictionaryApi } from "$lib/features/dictionary/api";
   import type { NoteType } from "$lib/shared/types";
   import { notesApi } from "../api";
 
@@ -20,7 +21,28 @@
   let exampleSentence = $state("");
   let collocationsText = $state("");
   let saving = $state(false);
+  let lookingUp = $state(false);
   let error = $state("");
+
+  async function handleAutoFill() {
+    if (!word.trim() || lookingUp) return;
+    lookingUp = true;
+    error = "";
+    try {
+      const entry = await dictionaryApi.lookup(word.trim());
+      if (entry.ipa && !ipa.trim()) ipa = entry.ipa;
+      if (!meaning.trim()) {
+        meaning = entry.meaningVi ?? entry.meaningEn ?? "";
+      }
+      if (entry.exampleSentence && !exampleSentence.trim()) {
+        exampleSentence = entry.exampleSentence;
+      }
+    } catch (err) {
+      error = String(err);
+    } finally {
+      lookingUp = false;
+    }
+  }
 
   function resetForm() {
     word = "";
@@ -106,9 +128,20 @@
 
         <div class="grid grid-cols-3 gap-3">
           <div class="col-span-2">
-            <label class="mb-1 block text-xs font-medium text-zinc-300" for="note-word">
-              {noteType === "cloze" ? "Từ cần điền" : "Từ / Cụm từ"}
-            </label>
+            <div class="mb-1 flex items-center justify-between">
+              <label class="block text-xs font-medium text-zinc-300" for="note-word">
+                {noteType === "cloze" ? "Từ cần điền" : "Từ / Cụm từ"}
+              </label>
+              <button
+                type="button"
+                onclick={handleAutoFill}
+                disabled={lookingUp || !word.trim()}
+                class="inline-flex items-center gap-1 text-[11px] font-medium text-indigo-400 hover:text-indigo-300 disabled:opacity-40"
+              >
+                <Sparkles class="h-3 w-3" />
+                {lookingUp ? "Đang tra..." : "Tự điền"}
+              </button>
+            </div>
             <input
               id="note-word"
               type="text"

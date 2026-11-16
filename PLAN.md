@@ -171,10 +171,10 @@ CREATE TABLE review_logs (
 - [x] Thống kê cơ bản (số thẻ đã học hôm nay, thẻ đến hạn).
 
 ### Giai đoạn 2: Sức Mạnh Desktop & Tự Động Hóa (Tuần 4–6)
-- [ ] Nhúng từ điển Offline (SQLite FTS5) + Auto-fill IPA, nghĩa, ví dụ.
-- [ ] Phát âm chuẩn (tích hợp tải/cache audio hoặc TTS).
-- [ ] Tính năng **Global Quick-Lookup** (System Tray + Phím tắt toàn cục + Mini Pop-up).
-- [ ] Chế độ **Dictation Mode** (nghe – gõ lại – highlight lỗi sai).
+- [x] Nhúng từ điển Offline (SQLite FTS5) + Auto-fill IPA, nghĩa, ví dụ.
+- [x] Phát âm chuẩn (tích hợp tải/cache audio hoặc TTS).
+- [x] Tính năng **Global Quick-Lookup** (System Tray + Phím tắt toàn cục + Mini Pop-up).
+- [x] Chế độ **Dictation Mode** (nghe – gõ lại – highlight lỗi sai).
 
 ### Giai đoạn 3: Active Production & Mining (Tuần 7–10)
 - [ ] Ghi âm Shadowing so sánh trực tiếp A/B.

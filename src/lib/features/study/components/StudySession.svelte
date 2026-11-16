@@ -1,6 +1,8 @@
 <script lang="ts">
-  import { ArrowLeft, CheckCircle2 } from "@lucide/svelte";
+  import { ArrowLeft, CheckCircle2, Headphones } from "@lucide/svelte";
   import { onMount } from "svelte";
+  import DictationPanel from "$lib/features/dictation/DictationPanel.svelte";
+  import { playWordAudio, speakWithTts } from "$lib/shared/audio";
   import type { DeckWithStats, Rating, StudyCard } from "$lib/shared/types";
   import { studyApi } from "../api";
   import FlashcardView from "./FlashcardView.svelte";
@@ -16,6 +18,7 @@
   let queue = $state<StudyCard[]>([]);
   let currentIndex = $state(0);
   let revealed = $state(false);
+  let dictationMode = $state(false);
   let loading = $state(true);
   let submitting = $state(false);
   let cardShownAt = $state(Date.now());
@@ -24,12 +27,12 @@
   const currentCard = $derived(queue[currentIndex] ?? null);
 
   function speakText(text: string) {
-    if (!text || typeof window === "undefined" || !("speechSynthesis" in window)) return;
-    window.speechSynthesis.cancel();
-    const utter = new SpeechSynthesisUtterance(text);
-    utter.lang = "en-US";
-    utter.rate = 0.95;
-    window.speechSynthesis.speak(utter);
+    if (!currentCard) return;
+    if (text === currentCard.note.word) {
+      void playWordAudio(currentCard.note.word, text);
+    } else {
+      speakWithTts(text);
+    }
   }
 
   async function loadQueue() {
@@ -100,10 +103,23 @@
       Quay lại ({deck.name})
     </button>
 
-    <div class="text-xs font-medium text-zinc-400">
-      {#if !loading && currentCard}
-        Thẻ {currentIndex + 1} / {queue.length}
-      {/if}
+    <div class="flex items-center gap-3">
+      <button
+        type="button"
+        onclick={() => (dictationMode = !dictationMode)}
+        class="inline-flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-medium transition {dictationMode
+          ? 'border-indigo-500/60 bg-indigo-500/15 text-indigo-300'
+          : 'border-zinc-800 bg-zinc-900 text-zinc-400 hover:text-zinc-200'}"
+      >
+        <Headphones class="h-3.5 w-3.5" />
+        Dictation
+      </button>
+
+      <div class="text-xs font-medium text-zinc-400">
+        {#if !loading && currentCard}
+          Thẻ {currentIndex + 1} / {queue.length}
+        {/if}
+      </div>
     </div>
   </div>
 
@@ -129,13 +145,21 @@
       </button>
     </div>
   {:else}
-    <FlashcardView
-      note={currentCard.note}
-      {revealed}
-      onSpeak={speakText}
-    />
+    {#if dictationMode}
+      <DictationPanel
+        targetText={currentCard.note.exampleSentence || currentCard.note.word}
+        onPlay={() => speakText(currentCard.note.exampleSentence || currentCard.note.word)}
+        onChecked={() => (revealed = true)}
+      />
+    {:else}
+      <FlashcardView
+        note={currentCard.note}
+        {revealed}
+        onSpeak={speakText}
+      />
+    {/if}
 
-    {#if !revealed}
+    {#if !revealed && !dictationMode}
       <button
         type="button"
         onclick={() => (revealed = true)}

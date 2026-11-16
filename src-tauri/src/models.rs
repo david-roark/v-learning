@@ -117,3 +117,30 @@ pub struct DailyStats {
     pub new_learned_today: i64,
     pub due_remaining: i64,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DictionaryEntry {
+    pub id: i64,
+    pub word: String,
+    pub ipa: Option<String>,
+    pub pos: Option<String>,
+    pub meaning_vi: Option<String>,
+    pub meaning_en: Option<String>,
+    pub example_sentence: Option<String>,
+    pub audio_url: Option<String>,
+    pub source: String,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UpsertDictionaryInput {
+    pub word: String,
+    pub ipa: Option<String>,
+    pub pos: Option<String>,
+    pub meaning_vi: Option<String>,
+    pub meaning_en: Option<String>,
+    pub example_sentence: Option<String>,
+    pub audio_url: Option<String>,
+    pub source: String,
+}

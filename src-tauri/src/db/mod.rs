@@ -1,5 +1,6 @@
 pub mod card_repo;
 pub mod deck_repo;
+pub mod dict_repo;
 pub mod migrations;
 pub mod note_repo;
 
