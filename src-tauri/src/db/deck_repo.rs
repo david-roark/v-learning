@@ -47,7 +47,9 @@ pub fn list_decks(conn: &Connection) -> AppResult<Vec<DeckWithStats>> {
 pub fn create_deck(conn: &Connection, input: CreateDeckInput) -> AppResult<Deck> {
     let name = input.name.trim().to_string();
     if name.is_empty() {
-        return Err(AppError::Validation("Tên bộ thẻ không được để trống".into()));
+        return Err(AppError::Validation(
+            "Tên bộ thẻ không được để trống".into(),
+        ));
     }
 
     let deck = Deck {

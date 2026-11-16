@@ -19,31 +19,67 @@ fn start_of_today_ms() -> i64 {
 
 pub fn get_study_queue(conn: &Connection, deck_id: &str, limit: i64) -> AppResult<Vec<StudyCard>> {
     let now_ms = Utc::now().timestamp_millis();
+    let today_start = start_of_today_ms();
+
+    let new_cards_per_day: i64 = conn
+        .query_row(
+            "SELECT new_cards_per_day FROM decks WHERE id = ?1",
+            params![deck_id],
+            |r| r.get(0),
+        )
+        .unwrap_or(20);
+
+    let new_learned_today: i64 = conn.query_row(
+        "SELECT COUNT(*) FROM review_logs r
+         JOIN cards c ON c.id = r.card_id
+         JOIN notes n ON n.id = c.note_id
+         WHERE n.deck_id = ?1 AND r.reviewed_at >= ?2 AND r.state = 0",
+        params![deck_id, today_start],
+        |r| r.get(0),
+    )?;
+
+    let remaining_new = (new_cards_per_day - new_learned_today).max(0).min(limit);
 
     let mut stmt = conn.prepare(
         r#"
-        SELECT
-            c.id, c.note_id, c.card_template, c.state, c.due,
-            c.stability, c.difficulty, c.elapsed_days, c.scheduled_days,
-            c.reps, c.lapses, c.last_review,
-            n.id, n.deck_id, n.note_type, n.word, n.ipa, n.meaning, n.example_sentence,
-            n.collocations, n.tags, n.created_at, n.updated_at,
-            d.desired_retention
-        FROM cards c
-        JOIN notes n ON n.id = c.note_id
-        JOIN decks d ON d.id = n.deck_id
-        WHERE n.deck_id = ?1
-          AND (c.state = 0 OR c.due <= ?2)
-        ORDER BY
-            CASE WHEN c.state IN (1, 3) THEN 0
-                 WHEN c.state = 2 THEN 1
-                 ELSE 2 END,
-            c.due ASC
+        SELECT * FROM (
+            SELECT
+                c.id, c.note_id, c.card_template, c.state, c.due,
+                c.stability, c.difficulty, c.elapsed_days, c.scheduled_days,
+                c.reps, c.lapses, c.last_review,
+                n.id, n.deck_id, n.note_type, n.word, n.ipa, n.meaning, n.example_sentence,
+                n.collocations, n.tags, n.created_at, n.updated_at,
+                d.desired_retention,
+                0 AS sort_group
+            FROM cards c
+            JOIN notes n ON n.id = c.note_id
+            JOIN decks d ON d.id = n.deck_id
+            WHERE n.deck_id = ?1 AND c.state != 0 AND c.due <= ?2
+            ORDER BY CASE WHEN c.state IN (1, 3) THEN 0 ELSE 1 END, c.due ASC
+            LIMIT ?3
+        )
+        UNION ALL
+        SELECT * FROM (
+            SELECT
+                c.id, c.note_id, c.card_template, c.state, c.due,
+                c.stability, c.difficulty, c.elapsed_days, c.scheduled_days,
+                c.reps, c.lapses, c.last_review,
+                n.id, n.deck_id, n.note_type, n.word, n.ipa, n.meaning, n.example_sentence,
+                n.collocations, n.tags, n.created_at, n.updated_at,
+                d.desired_retention,
+                1 AS sort_group
+            FROM cards c
+            JOIN notes n ON n.id = c.note_id
+            JOIN decks d ON d.id = n.deck_id
+            WHERE n.deck_id = ?1 AND c.state = 0
+            ORDER BY c.due ASC
+            LIMIT ?4
+        )
         LIMIT ?3
         "#,
     )?;
 
-    let rows = stmt.query_map(params![deck_id, now_ms, limit], |row| {
+    let rows = stmt.query_map(params![deck_id, now_ms, limit, remaining_new], |row| {
         let card = Card {
             id: row.get(0)?,
             note_id: row.get(1)?,
@@ -192,6 +228,38 @@ pub fn get_daily_stats(conn: &Connection) -> AppResult<DailyStats> {
     })
 }
 
+pub fn undo_review(conn: &mut Connection, prev: &Card) -> AppResult<()> {
+    let tx = conn.transaction()?;
+    tx.execute(
+        "DELETE FROM review_logs WHERE id = (
+            SELECT id FROM review_logs WHERE card_id = ?1 ORDER BY reviewed_at DESC LIMIT 1
+         )",
+        params![prev.id],
+    )?;
+
+    tx.execute(
+        "UPDATE cards
+         SET state = ?1, due = ?2, stability = ?3, difficulty = ?4,
+             elapsed_days = ?5, scheduled_days = ?6, reps = ?7,
+             lapses = ?8, last_review = ?9
+         WHERE id = ?10",
+        params![
+            prev.state,
+            prev.due,
+            prev.stability,
+            prev.difficulty,
+            prev.elapsed_days,
+            prev.scheduled_days,
+            prev.reps,
+            prev.lapses,
+            prev.last_review,
+            prev.id
+        ],
+    )?;
+    tx.commit()?;
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -245,5 +313,50 @@ mod tests {
         let decks = list_decks(&conn).expect("decks");
         assert_eq!(decks[0].new_count, 0);
         assert_eq!(decks[0].total_cards, 2);
+
+        // Undo first card review and verify stats/state revert
+        undo_review(&mut conn, &queue[0].card).expect("undo");
+        let stats_after_undo = get_daily_stats(&conn).expect("stats after undo");
+        assert_eq!(stats_after_undo.reviewed_today, 1);
+        assert_eq!(stats_after_undo.new_learned_today, 1);
+    }
+
+    #[test]
+    fn study_queue_respects_new_cards_per_day_limit() {
+        let mut conn = open_in_memory_for_test();
+        let deck = create_deck(
+            &conn,
+            CreateDeckInput {
+                name: "Limited Deck".into(),
+                description: None,
+                new_cards_per_day: Some(1),
+                desired_retention: None,
+            },
+        )
+        .expect("deck");
+
+        for w in ["alpha", "beta", "gamma"] {
+            create_note(
+                &mut conn,
+                CreateNoteInput {
+                    deck_id: deck.id.clone(),
+                    note_type: "vocab".into(),
+                    word: w.into(),
+                    ipa: None,
+                    meaning: w.into(),
+                    example_sentence: None,
+                    collocations: None,
+                    tags: None,
+                },
+            )
+            .expect("note");
+        }
+
+        let q1 = get_study_queue(&conn, &deck.id, 50).expect("q1");
+        assert_eq!(q1.len(), 1);
+        submit_review(&mut conn, &q1[0].card.id, 3, None).expect("review");
+
+        let q2 = get_study_queue(&conn, &deck.id, 50).expect("q2");
+        assert_eq!(q2.len(), 0);
     }
 }

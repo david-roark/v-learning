@@ -165,14 +165,17 @@ mod tests {
         }
 
         let mut conn = open_in_memory_for_test();
-        let report = import_apkg_bytes(&mut conn, "My Anki Deck", zip_buf.get_ref())
-            .expect("import apkg");
+        let report =
+            import_apkg_bytes(&mut conn, "My Anki Deck", zip_buf.get_ref()).expect("import apkg");
         assert_eq!(report.imported, 1);
         assert_eq!(report.skipped, 0);
 
         let notes = note_repo::list_notes_by_deck(&conn, &report.deck_id).expect("list");
         assert_eq!(notes[0].word, "ephemeral");
         assert_eq!(notes[0].meaning, "ngắn ngủi");
-        assert_eq!(notes[0].example_sentence.as_deref(), Some("Fashions are ephemeral."));
+        assert_eq!(
+            notes[0].example_sentence.as_deref(),
+            Some("Fashions are ephemeral.")
+        );
     }
 }

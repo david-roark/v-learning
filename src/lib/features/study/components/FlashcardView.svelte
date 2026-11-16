@@ -14,15 +14,20 @@
     if (note.noteType !== "cloze" || !note.exampleSentence) {
       return note.exampleSentence ?? "";
     }
+    const hint = note.word.length > 1 ? `${note.word[0]}______` : "______";
     const escaped = note.word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    return note.exampleSentence.replace(new RegExp(escaped, "gi"), "______");
+    return note.exampleSentence.replace(new RegExp(escaped, "gi"), hint);
   });
 </script>
 
-<div class="flex min-h-[320px] flex-col justify-between rounded-3xl border border-zinc-800 bg-zinc-900/90 p-8 shadow-xl">
+<div
+  class="flex min-h-[320px] flex-col justify-between rounded-3xl border border-zinc-800 bg-zinc-900/90 p-8 shadow-xl"
+>
   <!-- Front -->
   <div class="flex flex-col items-center text-center">
-    <span class="mb-3 rounded-full bg-zinc-800 px-3 py-1 text-[11px] font-medium tracking-wide text-zinc-400 uppercase">
+    <span
+      class="mb-3 rounded-full bg-zinc-800 px-3 py-1 text-[11px] font-medium tracking-wide text-zinc-400 uppercase"
+    >
       {note.noteType === "cloze" ? "Cloze" : "Vocabulary"}
     </span>
 

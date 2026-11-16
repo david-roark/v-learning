@@ -180,7 +180,9 @@ pub fn import_backup_json(conn: &mut Connection, json_str: &str) -> AppResult<Ba
 fn webdav_file_url(base_url: &str) -> AppResult<String> {
     let trimmed = base_url.trim().trim_end_matches('/');
     if trimmed.is_empty() {
-        return Err(AppError::Validation("WebDAV URL không được để trống".into()));
+        return Err(AppError::Validation(
+            "WebDAV URL không được để trống".into(),
+        ));
     }
     if trimmed.ends_with(".json") {
         Ok(trimmed.to_string())

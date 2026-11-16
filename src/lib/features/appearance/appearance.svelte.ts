@@ -24,19 +24,48 @@ export const THEME_OPTIONS: Array<{
   isLight?: boolean;
 }> = [
   { id: "dark-indigo", name: "Dark Indigo", bg: "#09090b", card: "#18181b", accent: "#6366f1" },
-  { id: "midnight-ocean", name: "Midnight Ocean", bg: "#07111e", card: "#0f1d32", accent: "#38bdf8" },
-  { id: "forest-emerald", name: "Forest Emerald", bg: "#07140e", card: "#0d2218", accent: "#34d399" },
+  {
+    id: "midnight-ocean",
+    name: "Midnight Ocean",
+    bg: "#07111e",
+    card: "#0f1d32",
+    accent: "#38bdf8",
+  },
+  {
+    id: "forest-emerald",
+    name: "Forest Emerald",
+    bg: "#07140e",
+    card: "#0d2218",
+    accent: "#34d399",
+  },
   { id: "rose-twilight", name: "Rose Twilight", bg: "#160c18", card: "#241428", accent: "#f472b6" },
   { id: "amber-noir", name: "Amber Noir", bg: "#12100e", card: "#1d1915", accent: "#fbbf24" },
   { id: "nord-frost", name: "Nord Frost", bg: "#242933", card: "#2e3440", accent: "#88c0d0" },
-  { id: "warm-sepia", name: "Warm Sepia", bg: "#f5efe6", card: "#ebe2d3", accent: "#b45309", isLight: true },
-  { id: "clean-light", name: "Clean Light", bg: "#f8fafc", card: "#ffffff", accent: "#4f46e5", isLight: true },
+  {
+    id: "warm-sepia",
+    name: "Warm Sepia",
+    bg: "#f5efe6",
+    card: "#ebe2d3",
+    accent: "#b45309",
+    isLight: true,
+  },
+  {
+    id: "clean-light",
+    name: "Clean Light",
+    bg: "#f8fafc",
+    card: "#ffffff",
+    accent: "#4f46e5",
+    isLight: true,
+  },
 ];
 
 export const GOOGLE_FONT_OPTIONS = [
   { value: '"Inter", "Noto Sans", sans-serif', label: "Inter (Hiện đại, rõ nét)" },
   { value: '"Noto Sans", sans-serif', label: "Noto Sans (Chuẩn đa ngôn ngữ & IPA)" },
-  { value: '"Be Vietnam Pro", "Noto Sans", sans-serif', label: "Be Vietnam Pro (Tối ưu Tiếng Việt)" },
+  {
+    value: '"Be Vietnam Pro", "Noto Sans", sans-serif',
+    label: "Be Vietnam Pro (Tối ưu Tiếng Việt)",
+  },
   { value: '"Plus Jakarta Sans", "Noto Sans", sans-serif', label: "Plus Jakarta Sans (Mềm mại)" },
   { value: '"Noto Serif", Georgia, serif', label: "Noto Serif (Kiểu sách báo)" },
 ];

@@ -25,9 +25,7 @@
   let open = $state(false);
   let containerEl = $state<HTMLDivElement | null>(null);
 
-  const selectedLabel = $derived(
-    options.find((o) => o.value === value)?.label ?? placeholder,
-  );
+  const selectedLabel = $derived(options.find((o) => o.value === value)?.label ?? placeholder);
 
   function choose(val: string) {
     value = val;

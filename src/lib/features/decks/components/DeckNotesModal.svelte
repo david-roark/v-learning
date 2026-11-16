@@ -36,7 +36,9 @@
 </script>
 
 <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-xs">
-  <div class="flex max-h-[80vh] w-full max-w-2xl flex-col rounded-2xl border border-zinc-800 bg-zinc-900 shadow-2xl">
+  <div
+    class="flex max-h-[80vh] w-full max-w-2xl flex-col rounded-2xl border border-zinc-800 bg-zinc-900 shadow-2xl"
+  >
     <div class="flex items-center justify-between border-b border-zinc-800 px-6 py-4">
       <div>
         <h2 class="text-base font-semibold text-white">Danh sách thẻ — {deck.name}</h2>
@@ -58,7 +60,9 @@
         <p class="py-8 text-center text-sm text-zinc-500">Bộ thẻ này chưa có thẻ nào.</p>
       {:else}
         {#each notes as note (note.id)}
-          <div class="flex items-start justify-between gap-3 rounded-xl border border-zinc-800 bg-zinc-950/70 p-3.5">
+          <div
+            class="flex items-start justify-between gap-3 rounded-xl border border-zinc-800 bg-zinc-950/70 p-3.5"
+          >
             <div>
               <div class="flex items-center gap-2">
                 <span class="font-semibold text-white">{note.word}</span>

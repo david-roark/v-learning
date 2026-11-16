@@ -10,9 +10,7 @@
   const maxForecast = $derived(
     summary ? Math.max(10, ...summary.forecast7d.map((d) => d.dueCount)) : 10,
   );
-  const hasOverload = $derived(
-    summary ? summary.forecast7d.some((d) => d.dueCount >= 100) : false,
-  );
+  const hasOverload = $derived(summary ? summary.forecast7d.some((d) => d.dueCount >= 100) : false);
 
   function heatColor(count: number): string {
     if (count === 0) return "bg-zinc-800/70";
@@ -67,10 +65,10 @@
       </div>
     </div>
 
-    <!-- 90-day Heatmap -->
+    <!-- 180-day Heatmap -->
     <div class="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5">
       <div class="mb-3 flex items-center justify-between">
-        <h3 class="text-sm font-semibold text-white">Hoạt động 90 ngày gần nhất</h3>
+        <h3 class="text-sm font-semibold text-white">Hoạt động 180 ngày gần nhất</h3>
         <div class="flex items-center gap-1.5 text-[11px] text-zinc-500">
           <span>Ít</span>
           <span class="h-2.5 w-2.5 rounded-xs bg-zinc-800"></span>
@@ -86,32 +84,38 @@
         {#each summary.heatmap as day (day.date)}
           <div
             title={`${day.date}: ${day.count} lượt ôn`}
-            class="aspect-square rounded-xs transition hover:ring-1 hover:ring-white/50 {heatColor(day.count)}"
+            class="aspect-square rounded-xs transition hover:ring-1 hover:ring-white/50 {heatColor(
+              day.count,
+            )}"
           ></div>
         {/each}
       </div>
     </div>
 
-    <!-- 7-day Workload Forecast -->
+    <!-- 14-day Workload Forecast -->
     <div class="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5">
       <div class="mb-4 flex items-center justify-between">
-        <h3 class="text-sm font-semibold text-white">Dự báo khối lượng ôn 7 ngày tới</h3>
+        <h3 class="text-sm font-semibold text-white">Dự báo khối lượng ôn 14 ngày tới</h3>
         {#if hasOverload}
-          <span class="inline-flex items-center gap-1.5 rounded-lg bg-amber-500/15 px-2.5 py-1 text-xs text-amber-300">
+          <span
+            class="inline-flex items-center gap-1.5 rounded-lg bg-amber-500/15 px-2.5 py-1 text-xs text-amber-300"
+          >
             <AlertTriangle class="h-3.5 w-3.5" />
             Có ngày vượt 100 thẻ — nên giảm thẻ mới
           </span>
         {/if}
       </div>
 
-      <div class="grid grid-cols-7 items-end gap-3 pt-4">
+      <div class="grid grid-cols-7 items-end gap-2.5 pt-4 sm:grid-cols-14">
         {#each summary.forecast7d as f, idx}
           {@const heightPct = Math.max(6, Math.round((f.dueCount / maxForecast) * 100))}
           <div class="flex flex-col items-center gap-2">
             <span class="text-xs font-medium text-zinc-300">{f.dueCount}</span>
             <div class="flex h-28 w-full items-end justify-center rounded-xl bg-zinc-950/80 p-1.5">
               <div
-                class="w-full rounded-lg transition-all {idx === 0 ? 'bg-indigo-500' : 'bg-indigo-500/50'}"
+                class="w-full rounded-lg transition-all {idx === 0
+                  ? 'bg-indigo-500'
+                  : 'bg-indigo-500/50'}"
                 style={`height: ${f.dueCount === 0 ? 4 : heightPct}%`}
               ></div>
             </div>

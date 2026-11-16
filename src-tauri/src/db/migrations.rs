@@ -103,14 +103,62 @@ CREATE TABLE IF NOT EXISTS app_settings (
 "#;
 
 const STARTER_DICT: &[(&str, &str, &str, &str, &str)] = &[
-    ("ubiquitous", "/juːˈbɪk.wɪ.təs/", "adj", "có mặt ở khắp mọi nơi", "Smartphones have become ubiquitous in modern life."),
-    ("pragmatic", "/præɡˈmæt.ɪk/", "adj", "thực tế, thực dụng", "We need a pragmatic approach to solve this issue."),
-    ("resilient", "/rɪˈzɪl.i.ənt/", "adj", "kiên cường, mau phục hồi", "Children are often remarkably resilient."),
-    ("ambiguous", "/æmˈbɪɡ.ju.əs/", "adj", "mơ hồ, đa nghĩa", "The wording of the contract is somewhat ambiguous."),
-    ("eloquent", "/ˈel.ə.kwənt/", "adj", "hùng hồn, có sức thuyết phục", "She gave an eloquent speech about climate change."),
-    ("ephemeral", "/ɪˈfem.ər.əl/", "adj", "phù du, ngắn ngủi", "Fame in the digital age is often ephemeral."),
-    ("meticulous", "/məˈtɪk.jə.ləs/", "adj", "tỉ mỉ, kỹ lưỡng", "He kept meticulous records of every transaction."),
-    ("inevitable", "/ɪˈnev.ɪ.tə.bəl/", "adj", "không thể tránh khỏi", "Change is an inevitable part of growth."),
+    (
+        "ubiquitous",
+        "/juːˈbɪk.wɪ.təs/",
+        "adj",
+        "có mặt ở khắp mọi nơi",
+        "Smartphones have become ubiquitous in modern life.",
+    ),
+    (
+        "pragmatic",
+        "/præɡˈmæt.ɪk/",
+        "adj",
+        "thực tế, thực dụng",
+        "We need a pragmatic approach to solve this issue.",
+    ),
+    (
+        "resilient",
+        "/rɪˈzɪl.i.ənt/",
+        "adj",
+        "kiên cường, mau phục hồi",
+        "Children are often remarkably resilient.",
+    ),
+    (
+        "ambiguous",
+        "/æmˈbɪɡ.ju.əs/",
+        "adj",
+        "mơ hồ, đa nghĩa",
+        "The wording of the contract is somewhat ambiguous.",
+    ),
+    (
+        "eloquent",
+        "/ˈel.ə.kwənt/",
+        "adj",
+        "hùng hồn, có sức thuyết phục",
+        "She gave an eloquent speech about climate change.",
+    ),
+    (
+        "ephemeral",
+        "/ɪˈfem.ər.əl/",
+        "adj",
+        "phù du, ngắn ngủi",
+        "Fame in the digital age is often ephemeral.",
+    ),
+    (
+        "meticulous",
+        "/məˈtɪk.jə.ləs/",
+        "adj",
+        "tỉ mỉ, kỹ lưỡng",
+        "He kept meticulous records of every transaction.",
+    ),
+    (
+        "inevitable",
+        "/ɪˈnev.ɪ.tə.bəl/",
+        "adj",
+        "không thể tránh khỏi",
+        "Change is an inevitable part of growth.",
+    ),
 ];
 
 pub fn run_migrations(conn: &Connection) -> AppResult<()> {

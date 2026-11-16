@@ -70,7 +70,11 @@ pub fn preview_intervals(card: &Card, desired_retention: f64) -> AppResult<Inter
     })
 }
 
-pub fn schedule_card(card: &Card, rating: i64, desired_retention: f64) -> AppResult<ScheduleResult> {
+pub fn schedule_card(
+    card: &Card,
+    rating: i64,
+    desired_retention: f64,
+) -> AppResult<ScheduleResult> {
     if !(1..=4).contains(&rating) {
         return Err(AppError::Validation(format!("Invalid rating: {rating}")));
     }

@@ -3,6 +3,13 @@ use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent}
 use tauri::{AppHandle, Manager, WebviewUrl, WebviewWindowBuilder};
 use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState};
 
+#[tauri::command]
+pub fn read_clipboard_text() -> String {
+    arboard::Clipboard::new()
+        .and_then(|mut cb| cb.get_text())
+        .unwrap_or_default()
+}
+
 pub fn toggle_quick_lookup(app: &AppHandle) {
     if let Some(win) = app.get_webview_window("quick-lookup") {
         if win.is_visible().unwrap_or(false) {
@@ -14,16 +21,13 @@ pub fn toggle_quick_lookup(app: &AppHandle) {
         return;
     }
 
-    let builder = WebviewWindowBuilder::new(
-        app,
-        "quick-lookup",
-        WebviewUrl::App("quick-lookup".into()),
-    )
-    .title("V-Learning Quick Lookup")
-    .inner_size(460.0, 440.0)
-    .resizable(false)
-    .always_on_top(true)
-    .center();
+    let builder =
+        WebviewWindowBuilder::new(app, "quick-lookup", WebviewUrl::App("quick-lookup".into()))
+            .title("V-Learning Quick Lookup")
+            .inner_size(460.0, 440.0)
+            .resizable(false)
+            .always_on_top(true)
+            .center();
 
     if let Ok(win) = builder.build() {
         let _ = win.set_focus();
@@ -75,11 +79,13 @@ pub fn setup_desktop_features(app: &AppHandle) -> tauri::Result<()> {
     tray_builder.build(app)?;
 
     let shortcut = Shortcut::new(Some(Modifiers::CONTROL | Modifiers::SHIFT), Code::KeyD);
-    let _ = app.global_shortcut().on_shortcut(shortcut, |app, _sc, event| {
-        if event.state() == ShortcutState::Pressed {
-            toggle_quick_lookup(app);
-        }
-    });
+    let _ = app
+        .global_shortcut()
+        .on_shortcut(shortcut, |app, _sc, event| {
+            if event.state() == ShortcutState::Pressed {
+                toggle_quick_lookup(app);
+            }
+        });
 
     Ok(())
 }

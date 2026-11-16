@@ -46,12 +46,11 @@ pub fn create_note(conn: &mut Connection, input: CreateNoteInput) -> AppResult<N
         ));
     }
 
-    let duplicate: bool = conn
-        .query_row(
-            "SELECT EXISTS(SELECT 1 FROM notes WHERE deck_id = ?1 AND word = ?2 COLLATE NOCASE)",
-            params![input.deck_id, word],
-            |r| r.get(0),
-        )?;
+    let duplicate: bool = conn.query_row(
+        "SELECT EXISTS(SELECT 1 FROM notes WHERE deck_id = ?1 AND word = ?2 COLLATE NOCASE)",
+        params![input.deck_id, word],
+        |r| r.get(0),
+    )?;
     if duplicate {
         return Err(AppError::Validation(format!(
             "Từ \"{word}\" đã tồn tại trong bộ thẻ này"
@@ -69,7 +68,10 @@ pub fn create_note(conn: &mut Connection, input: CreateNoteInput) -> AppResult<N
         deck_id: input.deck_id,
         note_type: note_type.clone(),
         word,
-        ipa: input.ipa.map(|s| s.trim().to_string()).filter(|s| !s.is_empty()),
+        ipa: input
+            .ipa
+            .map(|s| s.trim().to_string())
+            .filter(|s| !s.is_empty()),
         meaning,
         example_sentence: input
             .example_sentence
@@ -81,9 +83,14 @@ pub fn create_note(conn: &mut Connection, input: CreateNoteInput) -> AppResult<N
         updated_at: now_ms,
     };
 
-    let collocations_json = serde_json::to_string(&note.collocations).unwrap_or_else(|_| "[]".into());
+    let collocations_json =
+        serde_json::to_string(&note.collocations).unwrap_or_else(|_| "[]".into());
     let tags_json = serde_json::to_string(&note.tags).unwrap_or_else(|_| "[]".into());
-    let template = if note_type == "cloze" { "cloze" } else { "recognition" };
+    let template = if note_type == "cloze" {
+        "cloze"
+    } else {
+        "recognition"
+    };
 
     let tx = conn.transaction()?;
     tx.execute(
@@ -125,8 +132,8 @@ pub fn update_note(conn: &Connection, input: UpdateNoteInput) -> AppResult<()> {
     }
 
     let now_ms = Utc::now().timestamp_millis();
-    let collocations_json =
-        serde_json::to_string(&input.collocations.unwrap_or_default()).unwrap_or_else(|_| "[]".into());
+    let collocations_json = serde_json::to_string(&input.collocations.unwrap_or_default())
+        .unwrap_or_else(|_| "[]".into());
     let tags_json =
         serde_json::to_string(&input.tags.unwrap_or_default()).unwrap_or_else(|_| "[]".into());
 
@@ -137,7 +144,10 @@ pub fn update_note(conn: &Connection, input: UpdateNoteInput) -> AppResult<()> {
          WHERE id = ?8",
         params![
             word,
-            input.ipa.map(|s| s.trim().to_string()).filter(|s| !s.is_empty()),
+            input
+                .ipa
+                .map(|s| s.trim().to_string())
+                .filter(|s| !s.is_empty()),
             meaning,
             input
                 .example_sentence
@@ -205,7 +215,11 @@ mod tests {
         assert_eq!(notes[0].collocations, vec!["become ubiquitous"]);
 
         let card_count: i64 = conn
-            .query_row("SELECT COUNT(*) FROM cards WHERE note_id = ?1", params![note.id], |r| r.get(0))
+            .query_row(
+                "SELECT COUNT(*) FROM cards WHERE note_id = ?1",
+                params![note.id],
+                |r| r.get(0),
+            )
             .expect("count cards");
         assert_eq!(card_count, 1);
 

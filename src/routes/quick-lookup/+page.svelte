@@ -6,6 +6,7 @@
   import { dictionaryApi } from "$lib/features/dictionary/api";
   import { playWordAudio } from "$lib/shared/audio";
   import Select from "$lib/shared/components/Select.svelte";
+  import { invokeCmd } from "$lib/shared/tauri";
   import type { DeckWithStats, DictionaryEntry } from "$lib/shared/types";
 
   let query = $state("");
@@ -54,6 +55,16 @@
     inputEl?.focus();
     decks = await decksApi.list();
     if (decks.length > 0) selectedDeckId = decks[0].id;
+
+    try {
+      const clip = (await invokeCmd<string>("read_clipboard_text")).trim();
+      if (clip && clip.length <= 80 && !clip.includes("\n")) {
+        query = clip;
+        await handleLookup();
+      }
+    } catch {
+      // ignore clipboard errors
+    }
   });
 </script>
 

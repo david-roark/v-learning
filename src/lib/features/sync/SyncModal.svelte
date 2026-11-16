@@ -127,7 +127,9 @@
               Xuất file Backup (.json)
             </button>
 
-            <label class="inline-flex cursor-pointer items-center gap-1.5 rounded-xl border border-zinc-700 px-3.5 py-2 text-xs font-medium text-zinc-200 hover:bg-zinc-800">
+            <label
+              class="inline-flex cursor-pointer items-center gap-1.5 rounded-xl border border-zinc-700 px-3.5 py-2 text-xs font-medium text-zinc-200 hover:bg-zinc-800"
+            >
               <Upload class="h-3.5 w-3.5" />
               Khôi phục từ .json
               <input type="file" accept=".json" onchange={handleImportJson} class="hidden" />
@@ -137,7 +139,9 @@
 
         <!-- WebDAV Sync -->
         <div class="space-y-3 rounded-xl border border-zinc-800 bg-zinc-950/60 p-4">
-          <h3 class="text-xs font-semibold text-zinc-200 uppercase">WebDAV Cloud Sync (Nextcloud / NAS)</h3>
+          <h3 class="text-xs font-semibold text-zinc-200 uppercase">
+            WebDAV Cloud Sync (Nextcloud / NAS)
+          </h3>
 
           <input
             type="text"

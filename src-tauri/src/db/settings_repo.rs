@@ -77,7 +77,10 @@ mod tests {
         .expect("save");
 
         let loaded = get_ai_settings(&conn).expect("loaded");
-        assert_eq!(loaded.base_url, "https://generativelanguage.googleapis.com/v1beta/openai");
+        assert_eq!(
+            loaded.base_url,
+            "https://generativelanguage.googleapis.com/v1beta/openai"
+        );
         assert_eq!(loaded.api_key, "AIzaTestKey");
         assert_eq!(loaded.model, "gemini-2.5-flash");
     }

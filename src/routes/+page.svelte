@@ -46,10 +46,7 @@
   async function refreshDashboard() {
     loading = true;
     try {
-      const [deckList, daily] = await Promise.all([
-        decksApi.list(),
-        studyApi.getDailyStats(),
-      ]);
+      const [deckList, daily] = await Promise.all([decksApi.list(), studyApi.getDailyStats()]);
       decks = deckList;
       stats = daily;
     } finally {
@@ -96,7 +93,9 @@
 <div class="mx-auto max-w-5xl px-6 py-8">
   <header class="mb-8 flex flex-wrap items-center justify-between gap-4">
     <div class="flex items-center gap-3">
-      <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-600 text-white shadow-lg shadow-indigo-600/25">
+      <div
+        class="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-600 text-white shadow-lg shadow-indigo-600/25"
+      >
         <Sparkles class="h-5 w-5" />
       </div>
       <div>
@@ -111,7 +110,8 @@
           <button
             type="button"
             onclick={() => (activeTab = "decks")}
-            class="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 transition {activeTab === 'decks'
+            class="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 transition {activeTab ===
+            'decks'
               ? 'bg-zinc-800 text-white'
               : 'text-zinc-400 hover:text-zinc-200'}"
           >
@@ -121,7 +121,8 @@
           <button
             type="button"
             onclick={() => (activeTab = "dictionary")}
-            class="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 transition {activeTab === 'dictionary'
+            class="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 transition {activeTab ===
+            'dictionary'
               ? 'bg-zinc-800 text-white'
               : 'text-zinc-400 hover:text-zinc-200'}"
           >
@@ -131,7 +132,8 @@
           <button
             type="button"
             onclick={() => (activeTab = "reader")}
-            class="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 transition {activeTab === 'reader'
+            class="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 transition {activeTab ===
+            'reader'
               ? 'bg-zinc-800 text-white'
               : 'text-zinc-400 hover:text-zinc-200'}"
           >
@@ -141,7 +143,8 @@
           <button
             type="button"
             onclick={() => (activeTab = "analytics")}
-            class="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 transition {activeTab === 'analytics'
+            class="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 transition {activeTab ===
+            'analytics'
               ? 'bg-zinc-800 text-white'
               : 'text-zinc-400 hover:text-zinc-200'}"
           >
@@ -178,7 +181,9 @@
         </button>
 
         {#if activeTab === "decks"}
-          <label class="inline-flex cursor-pointer items-center gap-1.5 rounded-xl border border-zinc-700 px-3 py-2 text-xs font-medium text-zinc-300 hover:bg-zinc-800">
+          <label
+            class="inline-flex cursor-pointer items-center gap-1.5 rounded-xl border border-zinc-700 px-3 py-2 text-xs font-medium text-zinc-300 hover:bg-zinc-800"
+          >
             <Upload class="h-3.5 w-3.5" />
             Import .apkg
             <input type="file" accept=".apkg" onchange={handleImportApkg} class="hidden" />
@@ -197,7 +202,9 @@
   </header>
 
   {#if apkgMsg && activeTab === "decks" && !activeDeck}
-    <p class="mb-4 rounded-xl border border-zinc-800 bg-zinc-900/80 px-4 py-2.5 text-xs text-zinc-300">
+    <p
+      class="mb-4 rounded-xl border border-zinc-800 bg-zinc-900/80 px-4 py-2.5 text-xs text-zinc-300"
+    >
       {apkgMsg}
     </p>
   {/if}

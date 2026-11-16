@@ -25,7 +25,13 @@ pub struct ImportProgress {
     pub message: String,
 }
 
-pub fn emit_progress(app: Option<&AppHandle>, stage: &str, current: i64, total: i64, message: &str) {
+pub fn emit_progress(
+    app: Option<&AppHandle>,
+    stage: &str,
+    current: i64,
+    total: i64,
+    message: &str,
+) {
     if let Some(handle) = app {
         let _ = handle.emit(
             "dict-import-progress",
@@ -77,7 +83,10 @@ pub fn find_pack(pack_id: &str) -> AppResult<&'static DictionaryPack> {
 }
 
 fn parse_header(line: &str) -> (String, Option<String>) {
-    let raw = line.trim_start_matches('\u{feff}').trim_start_matches('@').trim();
+    let raw = line
+        .trim_start_matches('\u{feff}')
+        .trim_start_matches('@')
+        .trim();
     if let Some(slash_idx) = raw.find('/') {
         let word = raw[..slash_idx].trim().to_string();
         let ipa = raw[slash_idx..].trim().to_string();
@@ -93,7 +102,14 @@ pub fn import_fvdp_text(
     app: Option<&AppHandle>,
 ) -> AppResult<ImportReport> {
     let total_before = dict_repo::count_entries(conn)?;
-    let total_entries = content.lines().filter(|l| l.trim_start_matches('\u{feff}').trim_start().starts_with('@')).count() as i64;
+    let total_entries = content
+        .lines()
+        .filter(|l| {
+            l.trim_start_matches('\u{feff}')
+                .trim_start()
+                .starts_with('@')
+        })
+        .count() as i64;
 
     let tx = conn.transaction()?;
     let mut processed = 0_i64;
@@ -184,7 +200,12 @@ pub fn import_fvdp_text(
                     meanings.push(m.to_string());
                 }
             } else if line.starts_with('=') && cur_example.is_none() {
-                let ex = line.trim_start_matches('=').split('+').next().unwrap_or("").trim();
+                let ex = line
+                    .trim_start_matches('=')
+                    .split('+')
+                    .next()
+                    .unwrap_or("")
+                    .trim();
                 if !ex.is_empty() {
                     cur_example = Some(ex.to_string());
                 }
@@ -243,7 +264,13 @@ pub fn import_ipa_tsv(
         for line in content.lines() {
             let mut parts = line.split('\t');
             let word = parts.next().unwrap_or("").trim();
-            let ipa = parts.next().unwrap_or("").split(',').next().unwrap_or("").trim();
+            let ipa = parts
+                .next()
+                .unwrap_or("")
+                .split(',')
+                .next()
+                .unwrap_or("")
+                .trim();
             if word.is_empty() || ipa.is_empty() {
                 continue;
             }

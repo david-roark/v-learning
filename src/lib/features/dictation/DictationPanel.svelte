@@ -27,7 +27,9 @@
 
 <div class="rounded-3xl border border-zinc-800 bg-zinc-900/90 p-8 shadow-xl">
   <div class="mb-5 flex items-center justify-between">
-    <span class="rounded-full bg-indigo-500/15 px-3 py-1 text-[11px] font-medium text-indigo-300 uppercase">
+    <span
+      class="rounded-full bg-indigo-500/15 px-3 py-1 text-[11px] font-medium text-indigo-300 uppercase"
+    >
       Dictation Mode
     </span>
     <button
@@ -89,7 +91,9 @@
           {:else if tok.status === "missing"}
             <span class="rounded-lg bg-amber-500/15 px-2 py-1 text-amber-300">+{tok.text}</span>
           {:else}
-            <span class="rounded-lg bg-zinc-800 px-2 py-1 text-zinc-400 line-through">{tok.text}</span>
+            <span class="rounded-lg bg-zinc-800 px-2 py-1 text-zinc-400 line-through"
+              >{tok.text}</span
+            >
           {/if}
         {/each}
       </div>

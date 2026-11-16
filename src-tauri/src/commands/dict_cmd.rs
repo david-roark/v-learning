@@ -8,20 +8,18 @@ use crate::models::DictionaryEntry;
 #[tauri::command]
 pub async fn lookup_word(db: State<'_, DbState>, word: String) -> AppResult<DictionaryEntry> {
     {
-        let conn = db
-            .0
-            .lock()
-            .map_err(|_| AppError::Internal("Database lock poisoned".into()))?;
+        let conn =
+            db.0.lock()
+                .map_err(|_| AppError::Internal("Database lock poisoned".into()))?;
         if let Some(local) = dict_repo::find_exact(&conn, &word)? {
             return Ok(local);
         }
     }
 
     let online = dictionary::fetch_online_entry(&word).await?;
-    let conn = db
-        .0
-        .lock()
-        .map_err(|_| AppError::Internal("Database lock poisoned".into()))?;
+    let conn =
+        db.0.lock()
+            .map_err(|_| AppError::Internal("Database lock poisoned".into()))?;
     dict_repo::upsert_entry(&conn, &online)
 }
 
@@ -31,10 +29,9 @@ pub fn search_dictionary(
     query: String,
     limit: Option<i64>,
 ) -> AppResult<Vec<DictionaryEntry>> {
-    let conn = db
-        .0
-        .lock()
-        .map_err(|_| AppError::Internal("Database lock poisoned".into()))?;
+    let conn =
+        db.0.lock()
+            .map_err(|_| AppError::Internal("Database lock poisoned".into()))?;
     if query.trim().is_empty() {
         return dict_repo::list_entries(&conn, limit.unwrap_or(30).clamp(1, 100), 0);
     }
@@ -43,25 +40,28 @@ pub fn search_dictionary(
 
 #[tauri::command]
 pub fn get_dictionary_count(db: State<'_, DbState>) -> AppResult<i64> {
-    let conn = db
-        .0
-        .lock()
-        .map_err(|_| AppError::Internal("Database lock poisoned".into()))?;
+    let conn =
+        db.0.lock()
+            .map_err(|_| AppError::Internal("Database lock poisoned".into()))?;
     dict_repo::count_entries(&conn)
 }
 
 #[tauri::command]
 pub fn import_dictionary_tsv(db: State<'_, DbState>, content: String) -> AppResult<i64> {
-    let mut conn = db
-        .0
-        .lock()
-        .map_err(|_| AppError::Internal("Database lock poisoned".into()))?;
+    let mut conn =
+        db.0.lock()
+            .map_err(|_| AppError::Internal("Database lock poisoned".into()))?;
     dict_repo::bulk_import_tsv(&mut conn, &content)
 }
 
 #[tauri::command]
 pub fn list_dictionary_packs() -> Vec<importer::DictionaryPack> {
     importer::AVAILABLE_PACKS.to_vec()
+}
+
+#[tauri::command]
+pub async fn fetch_collocations(word: String) -> AppResult<Vec<String>> {
+    dictionary::fetch_collocations(&word).await
 }
 
 #[tauri::command]
@@ -95,12 +95,17 @@ pub async fn download_and_import_pack(
         .await
         .map_err(|e| AppError::Internal(format!("Lỗi đọc nội dung gói từ điển: {e}")))?;
 
-    importer::emit_progress(Some(&app), "importing", 0, 0, "Đang phân tích và lưu vào SQLite...");
+    importer::emit_progress(
+        Some(&app),
+        "importing",
+        0,
+        0,
+        "Đang phân tích và lưu vào SQLite...",
+    );
 
-    let mut conn = db
-        .0
-        .lock()
-        .map_err(|_| AppError::Internal("Database lock poisoned".into()))?;
+    let mut conn =
+        db.0.lock()
+            .map_err(|_| AppError::Internal("Database lock poisoned".into()))?;
 
     match pack.format {
         "fvdp" => importer::import_fvdp_text(&mut conn, &text, Some(&app)),

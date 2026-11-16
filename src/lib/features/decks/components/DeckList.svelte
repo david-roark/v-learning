@@ -15,7 +15,9 @@
 </script>
 
 {#if decks.length === 0}
-  <div class="flex flex-col items-center justify-center rounded-2xl border border-dashed border-zinc-800 bg-zinc-900/40 px-6 py-16 text-center">
+  <div
+    class="flex flex-col items-center justify-center rounded-2xl border border-dashed border-zinc-800 bg-zinc-900/40 px-6 py-16 text-center"
+  >
     <div class="mb-4 rounded-2xl bg-indigo-500/10 p-4 text-indigo-400">
       <BookOpen class="h-8 w-8" />
     </div>
@@ -36,7 +38,9 @@
   <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
     {#each decks as deck (deck.id)}
       {@const readyCount = deck.newCount + deck.dueCount}
-      <div class="group flex flex-col justify-between rounded-2xl border border-zinc-800/90 bg-zinc-900/70 p-5 transition hover:border-zinc-700 hover:bg-zinc-900">
+      <div
+        class="group flex flex-col justify-between rounded-2xl border border-zinc-800/90 bg-zinc-900/70 p-5 transition hover:border-zinc-700 hover:bg-zinc-900"
+      >
         <div>
           <div class="flex items-start justify-between gap-2">
             <h3 class="text-base font-semibold text-zinc-100">{deck.name}</h3>

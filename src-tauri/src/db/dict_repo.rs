@@ -116,7 +116,10 @@ pub fn bulk_import_tsv(conn: &mut Connection, content: &str) -> AppResult<i64> {
     Ok(imported)
 }
 
-pub fn upsert_entry(conn: &Connection, input: &UpsertDictionaryInput) -> AppResult<DictionaryEntry> {
+pub fn upsert_entry(
+    conn: &Connection,
+    input: &UpsertDictionaryInput,
+) -> AppResult<DictionaryEntry> {
     conn.execute(
         "INSERT INTO dictionary_entries (word, ipa, pos, meaning_vi, meaning_en, example_sentence, audio_url, source)
          VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)

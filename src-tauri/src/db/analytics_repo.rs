@@ -52,9 +52,9 @@ pub fn get_analytics_summary(conn: &Connection) -> AppResult<AnalyticsSummary> {
     )?;
 
     let today = Local::now().date_naive();
-    let start_90 = today - Duration::days(89);
+    let start_180 = today - Duration::days(179);
     let start_ms = Local
-        .from_local_datetime(&start_90.and_hms_opt(0, 0, 0).expect("midnight"))
+        .from_local_datetime(&start_180.and_hms_opt(0, 0, 0).expect("midnight"))
         .single()
         .map(|dt| dt.timestamp_millis())
         .unwrap_or(0);
@@ -75,16 +75,16 @@ pub fn get_analytics_summary(conn: &Connection) -> AppResult<AnalyticsSummary> {
 
     let streak_days = compute_streak(&day_counts);
 
-    let mut heatmap = Vec::with_capacity(90);
-    for i in 0..90 {
-        let d = start_90 + Duration::days(i);
+    let mut heatmap = Vec::with_capacity(180);
+    for i in 0..180 {
+        let d = start_180 + Duration::days(i);
         let key = d.format("%Y-%m-%d").to_string();
         let count = day_counts.get(&key).copied().unwrap_or(0);
         heatmap.push(HeatmapDay { date: key, count });
     }
 
-    let mut forecast_7d = Vec::with_capacity(7);
-    for i in 0..7 {
+    let mut forecast_7d = Vec::with_capacity(14);
+    for i in 0..14 {
         let d = today + Duration::days(i);
         let day_start = Local
             .from_local_datetime(&d.and_hms_opt(0, 0, 0).expect("midnight"))
@@ -174,7 +174,7 @@ mod tests {
         assert_eq!(summary.total_reviews, 1);
         assert_eq!(summary.true_retention, 100.0);
         assert_eq!(summary.streak_days, 1);
-        assert_eq!(summary.heatmap.len(), 90);
-        assert_eq!(summary.forecast_7d.len(), 7);
+        assert_eq!(summary.heatmap.len(), 180);
+        assert_eq!(summary.forecast_7d.len(), 14);
     }
 }

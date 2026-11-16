@@ -30,6 +30,7 @@ uuid = { version = "1.29.2", features = ["v4"] }
 reqwest = { version = "0.13.5", features = ["json"] }
 tauri-plugin-global-shortcut = "2.4.1"
 zip = { version = "9.6.0", default-features = false, features = ["deflate"] }
+arboard = "3.7.0"
 
 
 # Read the optimization guideline for more details: https://tauri.app/concept/size/#cargo-configuration

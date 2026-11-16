@@ -117,7 +117,12 @@
 
   async function handleDownloadPack(pack: DictionaryPack) {
     downloadingPackId = pack.id;
-    progress = { stage: "downloading", current: 0, total: 0, message: `Đang kết nối để tải ${pack.name}...` };
+    progress = {
+      stage: "downloading",
+      current: 0,
+      total: 0,
+      message: `Đang kết nối để tải ${pack.name}...`,
+    };
     error = "";
     statusMsg = "";
     try {
@@ -147,7 +152,9 @@
 </script>
 
 <div class="space-y-5">
-  <div class="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4">
+  <div
+    class="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4"
+  >
     <div class="flex items-center gap-3">
       <div class="rounded-xl bg-indigo-500/15 p-2.5 text-indigo-400">
         <BookA class="h-5 w-5" />
@@ -155,7 +162,8 @@
       <div>
         <h2 class="text-sm font-semibold text-white">Từ điển Offline & Online</h2>
         <p class="text-xs text-zinc-400">
-          Hiện có <strong class="text-zinc-200">{totalCount}</strong> từ trong SQLite local (tự động cache khi tra online)
+          Hiện có <strong class="text-zinc-200">{totalCount}</strong> từ trong SQLite local (tự động cache
+          khi tra online)
         </p>
       </div>
     </div>
@@ -181,16 +189,22 @@
   </div>
 
   {#if showImport}
-    <div class="space-y-4 rounded-2xl border border-zinc-800 bg-zinc-900/80 p-4 text-xs text-zinc-300">
+    <div
+      class="space-y-4 rounded-2xl border border-zinc-800 bg-zinc-900/80 p-4 text-xs text-zinc-300"
+    >
       <div>
         <p class="font-semibold text-white">Gói từ điển Offline có sẵn (Tải 1 chạm)</p>
         <div class="mt-2.5 grid gap-2.5 sm:grid-cols-2">
           {#each packs as pack (pack.id)}
-            <div class="flex flex-col justify-between rounded-xl border border-zinc-800 bg-zinc-950/70 p-3.5">
+            <div
+              class="flex flex-col justify-between rounded-xl border border-zinc-800 bg-zinc-950/70 p-3.5"
+            >
               <div>
                 <div class="flex items-center justify-between gap-2">
                   <span class="font-medium text-zinc-100">{pack.name}</span>
-                  <span class="shrink-0 rounded bg-zinc-800 px-1.5 py-0.5 text-[10px] text-zinc-400">
+                  <span
+                    class="shrink-0 rounded bg-zinc-800 px-1.5 py-0.5 text-[10px] text-zinc-400"
+                  >
                     {pack.sizeHint}
                   </span>
                 </div>
@@ -213,9 +227,13 @@
       <div class="border-t border-zinc-800 pt-3">
         <p class="font-medium text-white">Hoặc Import file thủ công (.tsv / .txt)</p>
         <p class="mt-1 text-zinc-400">
-          Định dạng mỗi dòng: <code class="rounded bg-zinc-950 px-1.5 py-0.5 text-indigo-300">word[TAB]ipa[TAB]pos[TAB]meaning_vi[TAB]example</code>
+          Định dạng mỗi dòng: <code class="rounded bg-zinc-950 px-1.5 py-0.5 text-indigo-300"
+            >word[TAB]ipa[TAB]pos[TAB]meaning_vi[TAB]example</code
+          >
         </p>
-        <label class="mt-2.5 inline-flex cursor-pointer items-center gap-2 rounded-xl border border-zinc-700 px-3.5 py-2 font-medium text-zinc-200 hover:bg-zinc-800">
+        <label
+          class="mt-2.5 inline-flex cursor-pointer items-center gap-2 rounded-xl border border-zinc-700 px-3.5 py-2 font-medium text-zinc-200 hover:bg-zinc-800"
+        >
           <Upload class="h-3.5 w-3.5" />
           Chọn file .tsv / .txt
           <input type="file" accept=".tsv,.txt" onchange={handleFileUpload} class="hidden" />
@@ -246,7 +264,8 @@
   </form>
 
   {#if progress}
-    {@const pct = progress.total > 0 ? Math.min(100, Math.round((progress.current / progress.total) * 100)) : 0}
+    {@const pct =
+      progress.total > 0 ? Math.min(100, Math.round((progress.current / progress.total) * 100)) : 0}
     <div class="space-y-2 rounded-xl border border-indigo-500/30 bg-indigo-500/10 p-3.5 text-xs">
       <div class="flex items-center justify-between text-indigo-200">
         <span>{progress.message}</span>
@@ -256,7 +275,9 @@
       </div>
       <div class="h-1.5 w-full overflow-hidden rounded-full bg-zinc-800">
         <div
-          class="h-full rounded-full bg-indigo-500 transition-all duration-200 {progress.total === 0 ? 'w-1/3 animate-pulse' : ''}"
+          class="h-full rounded-full bg-indigo-500 transition-all duration-200 {progress.total === 0
+            ? 'w-1/3 animate-pulse'
+            : ''}"
           style={progress.total > 0 ? `width: ${pct}%` : ""}
         ></div>
       </div>
@@ -272,7 +293,9 @@
 
   <div class="space-y-2.5">
     {#each entries as entry (entry.id)}
-      <div class="flex items-start justify-between gap-4 rounded-2xl border border-zinc-800/80 bg-zinc-900/60 p-4">
+      <div
+        class="flex items-start justify-between gap-4 rounded-2xl border border-zinc-800/80 bg-zinc-900/60 p-4"
+      >
         <div class="space-y-1">
           <div class="flex flex-wrap items-center gap-2">
             <span class="text-base font-bold text-white">{entry.word}</span>
@@ -280,9 +303,13 @@
               <span class="font-mono text-xs text-indigo-400">{entry.ipa}</span>
             {/if}
             {#if entry.pos}
-              <span class="rounded bg-zinc-800 px-1.5 py-0.5 text-[11px] text-zinc-400">{entry.pos}</span>
+              <span class="rounded bg-zinc-800 px-1.5 py-0.5 text-[11px] text-zinc-400"
+                >{entry.pos}</span
+              >
             {/if}
-            <span class="rounded bg-zinc-800/70 px-1.5 py-0.5 text-[10px] text-zinc-500">{entry.source}</span>
+            <span class="rounded bg-zinc-800/70 px-1.5 py-0.5 text-[10px] text-zinc-500"
+              >{entry.source}</span
+            >
           </div>
           <p class="text-sm text-emerald-400">{entry.meaningVi ?? entry.meaningEn ?? "—"}</p>
           {#if entry.meaningVi && entry.meaningEn}

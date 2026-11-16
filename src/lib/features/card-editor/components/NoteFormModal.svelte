@@ -1,18 +1,19 @@
 <script lang="ts">
   import { Sparkles, X } from "@lucide/svelte";
   import { dictionaryApi } from "$lib/features/dictionary/api";
-  import type { NoteType } from "$lib/shared/types";
+  import type { Note, NoteType } from "$lib/shared/types";
   import { notesApi } from "../api";
 
   interface Props {
     open: boolean;
     deckId: string;
     deckName: string;
+    editNote?: Note | null;
     onClose: () => void;
-    onSaved: () => void;
+    onSaved: (updated?: Note) => void;
   }
 
-  let { open, deckId, deckName, onClose, onSaved }: Props = $props();
+  let { open, deckId, deckName, editNote = null, onClose, onSaved }: Props = $props();
 
   let noteType = $state<NoteType>("vocab");
   let word = $state("");
@@ -24,18 +25,36 @@
   let lookingUp = $state(false);
   let error = $state("");
 
+  $effect(() => {
+    if (open && editNote) {
+      noteType = editNote.noteType;
+      word = editNote.word;
+      ipa = editNote.ipa ?? "";
+      meaning = editNote.meaning;
+      exampleSentence = editNote.exampleSentence ?? "";
+      collocationsText = editNote.collocations.join(", ");
+      error = "";
+    }
+  });
+
   async function handleAutoFill() {
     if (!word.trim() || lookingUp) return;
     lookingUp = true;
     error = "";
     try {
-      const entry = await dictionaryApi.lookup(word.trim());
+      const [entry, colls] = await Promise.all([
+        dictionaryApi.lookup(word.trim()),
+        dictionaryApi.collocations(word.trim()).catch(() => []),
+      ]);
       if (entry.ipa && !ipa.trim()) ipa = entry.ipa;
       if (!meaning.trim()) {
         meaning = entry.meaningVi ?? entry.meaningEn ?? "";
       }
       if (entry.exampleSentence && !exampleSentence.trim()) {
         exampleSentence = entry.exampleSentence;
+      }
+      if (colls.length > 0 && !collocationsText.trim()) {
+        collocationsText = colls.join(", ");
       }
     } catch (err) {
       error = String(err);
@@ -68,17 +87,37 @@
         .map((s) => s.trim())
         .filter(Boolean);
 
-      await notesApi.create({
-        deckId,
-        noteType,
-        word: word.trim(),
-        ipa: ipa.trim() || undefined,
-        meaning: meaning.trim(),
-        exampleSentence: exampleSentence.trim() || undefined,
-        collocations,
-      });
-      resetForm();
-      onSaved();
+      if (editNote) {
+        await notesApi.update({
+          id: editNote.id,
+          word: word.trim(),
+          ipa: ipa.trim() || undefined,
+          meaning: meaning.trim(),
+          exampleSentence: exampleSentence.trim() || undefined,
+          collocations,
+        });
+        onSaved({
+          ...editNote,
+          word: word.trim(),
+          ipa: ipa.trim() || null,
+          meaning: meaning.trim(),
+          exampleSentence: exampleSentence.trim() || null,
+          collocations,
+        });
+        onClose();
+      } else {
+        await notesApi.create({
+          deckId,
+          noteType,
+          word: word.trim(),
+          ipa: ipa.trim() || undefined,
+          meaning: meaning.trim(),
+          exampleSentence: exampleSentence.trim() || undefined,
+          collocations,
+        });
+        resetForm();
+        onSaved();
+      }
     } catch (err) {
       error = String(err);
     } finally {
@@ -92,7 +131,9 @@
     <div class="w-full max-w-lg rounded-2xl border border-zinc-800 bg-zinc-900 p-6 shadow-2xl">
       <div class="mb-4 flex items-center justify-between">
         <div>
-          <h2 class="text-lg font-semibold text-zinc-100">Thêm thẻ mới</h2>
+          <h2 class="text-lg font-semibold text-zinc-100">
+            {editNote ? "Sửa thẻ" : "Thêm thẻ mới"}
+          </h2>
           <p class="text-xs text-zinc-400">Bộ thẻ: {deckName}</p>
         </div>
         <button
@@ -218,7 +259,7 @@
             disabled={saving}
             class="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-500 disabled:opacity-50"
           >
-            {saving ? "Đang lưu..." : "Lưu & Thêm tiếp"}
+            {saving ? "Đang lưu..." : editNote ? "Lưu thay đổi" : "Lưu & Thêm tiếp"}
           </button>
         </div>
       </form>

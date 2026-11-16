@@ -44,15 +44,12 @@ pub fn parse_api_response(json_str: &str) -> AppResult<UpsertDictionaryInput> {
         .next()
         .ok_or_else(|| AppError::NotFound("Không tìm thấy từ trong từ điển online".into()))?;
 
-    let ipa = first
-        .phonetic
-        .filter(|s| !s.trim().is_empty())
-        .or_else(|| {
-            first
-                .phonetics
-                .iter()
-                .find_map(|p| p.text.as_ref().filter(|s| !s.trim().is_empty()).cloned())
-        });
+    let ipa = first.phonetic.filter(|s| !s.trim().is_empty()).or_else(|| {
+        first
+            .phonetics
+            .iter()
+            .find_map(|p| p.text.as_ref().filter(|s| !s.trim().is_empty()).cloned())
+    });
 
     let audio_url = first
         .phonetics
@@ -60,7 +57,9 @@ pub fn parse_api_response(json_str: &str) -> AppResult<UpsertDictionaryInput> {
         .find_map(|p| p.audio.as_ref().filter(|s| !s.trim().is_empty()).cloned());
 
     let first_meaning = first.meanings.into_iter().next();
-    let pos = first_meaning.as_ref().and_then(|m| m.part_of_speech.clone());
+    let pos = first_meaning
+        .as_ref()
+        .and_then(|m| m.part_of_speech.clone());
     let first_def = first_meaning.and_then(|m| m.definitions.into_iter().next());
 
     let meaning_en = first_def.as_ref().and_then(|d| d.definition.clone());
@@ -81,7 +80,9 @@ pub fn parse_api_response(json_str: &str) -> AppResult<UpsertDictionaryInput> {
 pub async fn fetch_online_entry(word: &str) -> AppResult<UpsertDictionaryInput> {
     let trimmed = word.trim();
     if trimmed.is_empty() {
-        return Err(AppError::Validation("Từ tra cứu không được để trống".into()));
+        return Err(AppError::Validation(
+            "Từ tra cứu không được để trống".into(),
+        ));
     }
 
     let url = format!(
@@ -104,6 +105,33 @@ pub async fn fetch_online_entry(word: &str) -> AppResult<UpsertDictionaryInput> 
         .map_err(|e| AppError::Internal(format!("Lỗi đọc phản hồi từ điển: {e}")))?;
 
     parse_api_response(&body)
+}
+
+#[derive(Debug, Deserialize)]
+struct DatamuseWord {
+    word: String,
+}
+
+pub async fn fetch_collocations(word: &str) -> AppResult<Vec<String>> {
+    let trimmed = word.trim().to_lowercase();
+    if trimmed.is_empty() {
+        return Ok(Vec::new());
+    }
+
+    let url = format!("https://api.datamuse.com/words?rel_bga={trimmed}&max=6");
+    let resp = reqwest::get(&url)
+        .await
+        .map_err(|e| AppError::Internal(format!("Lỗi kết nối Datamuse: {e}")))?;
+
+    if !resp.status().is_success() {
+        return Ok(Vec::new());
+    }
+
+    let items: Vec<DatamuseWord> = resp.json().await.unwrap_or_default();
+    Ok(items
+        .into_iter()
+        .map(|item| format!("{trimmed} {}", item.word))
+        .collect())
 }
 
 #[cfg(test)]
@@ -130,8 +158,14 @@ mod tests {
         assert_eq!(parsed.word, "ephemeral");
         assert_eq!(parsed.ipa.as_deref(), Some("/ɪˈfɛm.ə.ɹəl/"));
         assert_eq!(parsed.pos.as_deref(), Some("adjective"));
-        assert_eq!(parsed.meaning_en.as_deref(), Some("Lasting for a very short time."));
-        assert_eq!(parsed.example_sentence.as_deref(), Some("fashions are ephemeral"));
+        assert_eq!(
+            parsed.meaning_en.as_deref(),
+            Some("Lasting for a very short time.")
+        );
+        assert_eq!(
+            parsed.example_sentence.as_deref(),
+            Some("fashions are ephemeral")
+        );
         assert!(parsed.audio_url.is_some());
     }
 }

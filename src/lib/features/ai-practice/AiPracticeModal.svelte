@@ -53,7 +53,9 @@
         <p class="text-xs text-zinc-400">Hãy viết 1–2 câu tiếng Anh sử dụng các từ vừa ôn:</p>
         <div class="mt-2 flex flex-wrap gap-1.5">
           {#each targetWords as w}
-            <span class="rounded-lg bg-indigo-500/15 px-2.5 py-1 text-xs font-medium text-indigo-300">
+            <span
+              class="rounded-lg bg-indigo-500/15 px-2.5 py-1 text-xs font-medium text-indigo-300"
+            >
               {w}
             </span>
           {/each}
@@ -85,7 +87,9 @@
       {/if}
 
       {#if feedback}
-        <div class="mt-4 max-h-60 overflow-y-auto rounded-xl border border-zinc-800 bg-zinc-950 p-4 text-xs leading-relaxed whitespace-pre-wrap text-zinc-200">
+        <div
+          class="mt-4 max-h-60 overflow-y-auto rounded-xl border border-zinc-800 bg-zinc-950 p-4 text-xs leading-relaxed whitespace-pre-wrap text-zinc-200"
+        >
           {feedback}
         </div>
       {/if}

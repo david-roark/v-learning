@@ -5,7 +5,7 @@
   import { playWordAudio } from "$lib/shared/audio";
   import Select from "$lib/shared/components/Select.svelte";
   import type { DeckWithStats, DictionaryEntry } from "$lib/shared/types";
-  import { tokenizeWithSentences, type TextToken } from "./textParser";
+  import { stripSubtitleMetadata, tokenizeWithSentences, type TextToken } from "./textParser";
 
   interface Props {
     decks: DeckWithStats[];
@@ -72,7 +72,9 @@
     const input = e.currentTarget as HTMLInputElement;
     const file = input.files?.[0];
     if (!file) return;
-    articleText = await file.text();
+    const raw = await file.text();
+    const isSub = /\.(srt|vtt)$/i.test(file.name);
+    articleText = isSub ? stripSubtitleMetadata(raw) : raw;
     editing = false;
     input.value = "";
   }
@@ -80,20 +82,33 @@
 
 <div class="grid gap-5 lg:grid-cols-3">
   <div class="space-y-4 lg:col-span-2">
-    <div class="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4">
+    <div
+      class="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4"
+    >
       <div class="flex items-center gap-2.5">
         <BookOpenText class="h-5 w-5 text-indigo-400" />
         <div>
-          <h2 class="text-sm font-semibold text-white">Trình đọc & Khai thác câu (Sentence Mining)</h2>
-          <p class="text-xs text-zinc-400">Click vào bất kỳ từ nào để tra và lưu kèm câu ngữ cảnh</p>
+          <h2 class="text-sm font-semibold text-white">
+            Trình đọc & Khai thác câu (Sentence Mining)
+          </h2>
+          <p class="text-xs text-zinc-400">
+            Click vào bất kỳ từ nào để tra và lưu kèm câu ngữ cảnh
+          </p>
         </div>
       </div>
 
       <div class="flex items-center gap-2">
-        <label class="inline-flex cursor-pointer items-center gap-1.5 rounded-xl border border-zinc-700 px-3 py-1.5 text-xs text-zinc-300 hover:bg-zinc-800">
+        <label
+          class="inline-flex cursor-pointer items-center gap-1.5 rounded-xl border border-zinc-700 px-3 py-1.5 text-xs text-zinc-300 hover:bg-zinc-800"
+        >
           <Upload class="h-3.5 w-3.5" />
-          Mở .txt/.md
-          <input type="file" accept=".txt,.md" onchange={handleFileUpload} class="hidden" />
+          Mở .txt/.srt
+          <input
+            type="file"
+            accept=".txt,.md,.srt,.vtt"
+            onchange={handleFileUpload}
+            class="hidden"
+          />
         </label>
         <button
           type="button"
@@ -113,13 +128,16 @@
         class="w-full rounded-2xl border border-zinc-700 bg-zinc-900 p-4 text-sm leading-relaxed text-zinc-100 focus:border-indigo-500 focus:outline-none"
       ></textarea>
     {:else}
-      <div class="rounded-2xl border border-zinc-800 bg-zinc-900/70 p-6 text-base leading-8 text-zinc-200">
+      <div
+        class="rounded-2xl border border-zinc-800 bg-zinc-900/70 p-6 text-base leading-8 text-zinc-200"
+      >
         {#each tokens as tok}
           {#if tok.isWord}
             <button
               type="button"
               onclick={() => handleWordClick(tok)}
-              class="rounded px-0.5 transition hover:bg-indigo-500/25 hover:text-indigo-200 {selectedToken?.text === tok.text
+              class="rounded px-0.5 transition hover:bg-indigo-500/25 hover:text-indigo-200 {selectedToken?.text ===
+              tok.text
                 ? 'bg-indigo-600/30 text-indigo-200'
                 : ''}"
             >

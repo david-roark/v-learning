@@ -11,9 +11,8 @@ pub fn import_apkg(
     deck_name: String,
     bytes: Vec<u8>,
 ) -> AppResult<ApkgImportReport> {
-    let mut conn = db
-        .0
-        .lock()
-        .map_err(|_| AppError::Internal("Database lock poisoned".into()))?;
+    let mut conn =
+        db.0.lock()
+            .map_err(|_| AppError::Internal("Database lock poisoned".into()))?;
     anki::import_apkg_bytes(&mut conn, &deck_name, &bytes)
 }

@@ -10,7 +10,10 @@
 
   type ProviderId = "gemini" | "openai" | "ollama" | "custom";
 
-  const PRESETS: Record<Exclude<ProviderId, "custom">, { label: string; baseUrl: string; defaultModel: string }> = {
+  const PRESETS: Record<
+    Exclude<ProviderId, "custom">,
+    { label: string; baseUrl: string; defaultModel: string }
+  > = {
     gemini: {
       label: "Google Gemini",
       baseUrl: "https://generativelanguage.googleapis.com/v1beta/openai",
@@ -139,7 +142,7 @@
       </div>
 
       <div class="mb-4 grid grid-cols-4 gap-1.5 rounded-xl bg-zinc-950 p-1">
-        {#each (["gemini", "openai", "ollama", "custom"] as const) as pid}
+        {#each ["gemini", "openai", "ollama", "custom"] as const as pid}
           <button
             type="button"
             onclick={() => selectProvider(pid)}
@@ -147,7 +150,13 @@
               ? 'bg-indigo-600 text-white'
               : 'text-zinc-400 hover:text-zinc-200'}"
           >
-            {pid === "custom" ? "Tuỳ chỉnh" : pid === "gemini" ? "Gemini" : pid === "openai" ? "OpenAI" : "Ollama"}
+            {pid === "custom"
+              ? "Tuỳ chỉnh"
+              : pid === "gemini"
+                ? "Gemini"
+                : pid === "openai"
+                  ? "OpenAI"
+                  : "Ollama"}
           </button>
         {/each}
       </div>

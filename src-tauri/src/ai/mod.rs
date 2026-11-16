@@ -77,7 +77,9 @@ pub async fn fetch_models(base_url: &str, api_key: &str) -> AppResult<Vec<String
     if !resp.status().is_success() {
         let status = resp.status();
         let body = resp.text().await.unwrap_or_default();
-        return Err(AppError::Internal(format!("Lỗi kết nối ({status}): {body}")));
+        return Err(AppError::Internal(format!(
+            "Lỗi kết nối ({status}): {body}"
+        )));
     }
 
     let body = resp
@@ -94,11 +96,15 @@ pub async fn evaluate_practice(
     user_text: &str,
 ) -> AppResult<AiPracticeFeedback> {
     if user_text.trim().is_empty() {
-        return Err(AppError::Validation("Vui lòng nhập câu tiếng Anh của bạn.".into()));
+        return Err(AppError::Validation(
+            "Vui lòng nhập câu tiếng Anh của bạn.".into(),
+        ));
     }
     let base = settings.base_url.trim().trim_end_matches('/');
     if base.is_empty() || settings.model.trim().is_empty() {
-        return Err(AppError::Validation("Vui lòng cấu hình Base URL và Model AI trước.".into()));
+        return Err(AppError::Validation(
+            "Vui lòng cấu hình Base URL và Model AI trước.".into(),
+        ));
     }
 
     let words_str = target_words.join(", ");
@@ -109,17 +115,21 @@ pub async fn evaluate_practice(
         2) Câu sửa lại (nếu có lỗi); \
         3) 1-2 gợi ý diễn đạt tự nhiên hơn (natural phrasing).";
 
-    let user_prompt = format!(
-        "Từ vựng mục tiêu: [{words_str}]\nCâu của tôi: {user_text}"
-    );
+    let user_prompt = format!("Từ vựng mục tiêu: [{words_str}]\nCâu của tôi: {user_text}");
 
     let client = reqwest::Client::new();
     let url = format!("{base}/chat/completions");
     let mut req = client.post(&url).json(&ChatRequest {
         model: settings.model.trim(),
         messages: vec![
-            ChatMessage { role: "system", content: system_prompt },
-            ChatMessage { role: "user", content: &user_prompt },
+            ChatMessage {
+                role: "system",
+                content: system_prompt,
+            },
+            ChatMessage {
+                role: "user",
+                content: &user_prompt,
+            },
         ],
         temperature: 0.4,
     });
@@ -136,7 +146,9 @@ pub async fn evaluate_practice(
     if !resp.status().is_success() {
         let status = resp.status();
         let body = resp.text().await.unwrap_or_default();
-        return Err(AppError::Internal(format!("AI API trả lỗi {status}: {body}")));
+        return Err(AppError::Internal(format!(
+            "AI API trả lỗi {status}: {body}"
+        )));
     }
 
     let parsed: ChatResponse = resp
@@ -162,6 +174,9 @@ mod tests {
     fn parse_models_json_strips_models_prefix_and_sorts() {
         let json = r#"{"data":[{"id":"models/gemini-2.5-flash"},{"id":"models/gemini-2.5-pro"},{"id":"gpt-4o-mini"}]}"#;
         let ids = parse_models_json(json).expect("parse models");
-        assert_eq!(ids, vec!["gemini-2.5-flash", "gemini-2.5-pro", "gpt-4o-mini"]);
+        assert_eq!(
+            ids,
+            vec!["gemini-2.5-flash", "gemini-2.5-pro", "gpt-4o-mini"]
+        );
     }
 }

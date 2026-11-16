@@ -47,12 +47,16 @@
                 style={`background-color: ${t.bg};`}
               >
                 <div class="flex w-full items-center gap-1.5">
-                  <span class="h-3.5 w-3.5 rounded-full" style={`background-color: ${t.card}; border: 1px solid ${t.accent};`}></span>
-                  <span class="h-2 flex-1 rounded-full" style={`background-color: ${t.accent};`}></span>
+                  <span
+                    class="h-3.5 w-3.5 rounded-full"
+                    style={`background-color: ${t.card}; border: 1px solid ${t.accent};`}
+                  ></span>
+                  <span class="h-2 flex-1 rounded-full" style={`background-color: ${t.accent};`}
+                  ></span>
                 </div>
                 <span
                   class="text-[11px] font-medium"
-                  style={`color: ${t.isLight ? '#1e293b' : '#f4f4f5'}`}
+                  style={`color: ${t.isLight ? "#1e293b" : "#f4f4f5"}`}
                 >
                   {t.name}
                 </span>
@@ -64,7 +68,9 @@
         <!-- Font Family -->
         <div class="grid gap-3 sm:grid-cols-2">
           <div>
-            <span class="mb-1.5 block text-xs font-medium text-zinc-300">Font chữ chính (Google Fonts)</span>
+            <span class="mb-1.5 block text-xs font-medium text-zinc-300"
+              >Font chữ chính (Google Fonts)</span
+            >
             <Select options={GOOGLE_FONT_OPTIONS} bind:value={appearance.fontFamily} />
           </div>
           <div>
