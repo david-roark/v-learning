@@ -3,6 +3,7 @@ pub mod deck_repo;
 pub mod dict_repo;
 pub mod migrations;
 pub mod note_repo;
+pub mod settings_repo;
 
 use std::fs;
 use std::sync::Mutex;

@@ -144,3 +144,26 @@ pub struct UpsertDictionaryInput {
     pub audio_url: Option<String>,
     pub source: String,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AiSettings {
+    pub base_url: String,
+    pub api_key: String,
+    pub model: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AiPracticeFeedback {
+    pub feedback: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ApkgImportReport {
+    pub deck_id: String,
+    pub deck_name: String,
+    pub imported: i64,
+    pub skipped: i64,
+}

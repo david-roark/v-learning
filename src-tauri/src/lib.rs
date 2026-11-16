@@ -1,3 +1,5 @@
+mod ai;
+mod anki;
 mod commands;
 mod db;
 mod desktop;
@@ -9,7 +11,7 @@ mod srs;
 
 use tauri::Manager;
 
-use commands::{deck_cmd, dict_cmd, media_cmd, note_cmd, study_cmd};
+use commands::{ai_cmd, anki_cmd, deck_cmd, dict_cmd, media_cmd, note_cmd, study_cmd};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -40,6 +42,11 @@ pub fn run() {
             dict_cmd::list_dictionary_packs,
             dict_cmd::download_and_import_pack,
             media_cmd::fetch_audio,
+            ai_cmd::get_ai_settings,
+            ai_cmd::save_ai_settings,
+            ai_cmd::list_ai_models,
+            ai_cmd::evaluate_ai_practice,
+            anki_cmd::import_apkg,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

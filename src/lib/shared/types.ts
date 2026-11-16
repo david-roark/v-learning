@@ -126,3 +126,20 @@ export interface ImportProgress {
   total: number;
   message: string;
 }
+
+export interface AiSettings {
+  baseUrl: string;
+  apiKey: string;
+  model: string;
+}
+
+export interface AiPracticeFeedback {
+  feedback: string;
+}
+
+export interface ApkgImportReport {
+  deckId: string;
+  deckName: string;
+  imported: number;
+  skipped: number;
+}

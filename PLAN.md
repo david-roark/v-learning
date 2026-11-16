@@ -177,9 +177,9 @@ CREATE TABLE review_logs (
 - [x] Chế độ **Dictation Mode** (nghe – gõ lại – highlight lỗi sai).
 
 ### Giai đoạn 3: Active Production & Mining (Tuần 7–10)
-- [ ] Ghi âm Shadowing so sánh trực tiếp A/B.
-- [ ] Tích hợp AI (tùy chọn API key của người dùng) để chấm câu viết từ vựng vừa ôn.
-- [ ] Trình đọc EPUB/Text tích hợp hoặc Import/Export `.apkg` (Anki).
+- [x] Ghi âm Shadowing so sánh trực tiếp A/B.
+- [x] Tích hợp AI (tùy chọn API key của người dùng) để chấm câu viết từ vựng vừa ôn.
+- [x] Trình đọc Text tích hợp & Import `.apkg` (Anki).
 
 ### Giai đoạn 4: Hoàn Thiện & Đồng Bộ (Mở rộng)
 - [ ] Cloud Sync (hỗ trợ tự đồng bộ qua WebDAV / S3 / Google Drive để giữ tính riêng tư).

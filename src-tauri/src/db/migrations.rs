@@ -95,6 +95,11 @@ CREATE TRIGGER IF NOT EXISTS dict_au AFTER UPDATE ON dictionary_entries BEGIN
     INSERT INTO dictionary_fts(rowid, word, meaning_vi, meaning_en)
     VALUES (new.id, new.word, COALESCE(new.meaning_vi, ''), COALESCE(new.meaning_en, ''));
 END;
+
+CREATE TABLE IF NOT EXISTS app_settings (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL
+);
 "#;
 
 const STARTER_DICT: &[(&str, &str, &str, &str, &str)] = &[

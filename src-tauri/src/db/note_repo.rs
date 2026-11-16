@@ -232,4 +232,44 @@ mod tests {
             .expect("count cards after delete");
         assert_eq!(cards_after, 0);
     }
+
+    #[test]
+    fn create_note_rejects_case_insensitive_duplicate_in_same_deck() {
+        let mut conn = open_in_memory_for_test();
+        let d1 = create_deck(
+            &conn,
+            CreateDeckInput {
+                name: "Deck 1".into(),
+                description: None,
+                new_cards_per_day: None,
+                desired_retention: None,
+            },
+        )
+        .expect("d1");
+        let d2 = create_deck(
+            &conn,
+            CreateDeckInput {
+                name: "Deck 2".into(),
+                description: None,
+                new_cards_per_day: None,
+                desired_retention: None,
+            },
+        )
+        .expect("d2");
+
+        let make = |deck_id: String, word: &str| CreateNoteInput {
+            deck_id,
+            note_type: "vocab".into(),
+            word: word.into(),
+            ipa: None,
+            meaning: "thực tế".into(),
+            example_sentence: None,
+            collocations: None,
+            tags: None,
+        };
+
+        create_note(&mut conn, make(d1.id.clone(), "Pragmatic")).expect("first");
+        assert!(create_note(&mut conn, make(d1.id.clone(), "pragmatic")).is_err());
+        assert!(create_note(&mut conn, make(d2.id, "pragmatic")).is_ok());
+    }
 }

@@ -1,7 +1,9 @@
 <script lang="ts">
-  import { ArrowLeft, CheckCircle2, Headphones } from "@lucide/svelte";
+  import { ArrowLeft, CheckCircle2, Headphones, Sparkles } from "@lucide/svelte";
   import { onMount } from "svelte";
+  import AiPracticeModal from "$lib/features/ai-practice/AiPracticeModal.svelte";
   import DictationPanel from "$lib/features/dictation/DictationPanel.svelte";
+  import ShadowingBar from "$lib/features/shadowing/ShadowingBar.svelte";
   import { playWordAudio, speakWithTts } from "$lib/shared/audio";
   import type { DeckWithStats, Rating, StudyCard } from "$lib/shared/types";
   import { studyApi } from "../api";
@@ -23,6 +25,8 @@
   let submitting = $state(false);
   let cardShownAt = $state(Date.now());
   let completedCount = $state(0);
+  let reviewedWords = $state<string[]>([]);
+  let showAiPractice = $state(false);
 
   const currentCard = $derived(queue[currentIndex] ?? null);
 
@@ -54,6 +58,9 @@
 
     try {
       await studyApi.submitReview(currentCard.card.id, rating, durationMs);
+      if (!reviewedWords.includes(currentCard.note.word)) {
+        reviewedWords = [...reviewedWords, currentCard.note.word];
+      }
       completedCount += 1;
       currentIndex += 1;
       revealed = false;
@@ -136,13 +143,25 @@
       <p class="mt-2 text-sm text-zinc-400">
         Bạn đã ôn xong {completedCount} thẻ trong bộ "{deck.name}".
       </p>
-      <button
-        type="button"
-        onclick={onExit}
-        class="mt-6 rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-indigo-500"
-      >
-        Về danh sách bộ thẻ
-      </button>
+      <div class="mt-6 flex flex-wrap justify-center gap-3">
+        {#if reviewedWords.length > 0}
+          <button
+            type="button"
+            onclick={() => (showAiPractice = true)}
+            class="inline-flex items-center gap-2 rounded-xl border border-indigo-500/40 bg-indigo-500/15 px-4 py-2.5 text-sm font-medium text-indigo-300 hover:bg-indigo-500/25"
+          >
+            <Sparkles class="h-4 w-4" />
+            Luyện đặt câu với AI ({Math.min(5, reviewedWords.length)} từ)
+          </button>
+        {/if}
+        <button
+          type="button"
+          onclick={onExit}
+          class="rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-indigo-500"
+        >
+          Về danh sách bộ thẻ
+        </button>
+      </div>
     </div>
   {:else}
     {#if dictationMode}
@@ -168,6 +187,7 @@
         Hiện đáp án <span class="ml-2 rounded bg-black/25 px-2 py-0.5 font-mono text-xs">Space</span>
       </button>
     {:else}
+      <ShadowingBar onPlaySample={() => speakText(currentCard.note.exampleSentence || currentCard.note.word)} />
       <RatingBar intervals={currentCard.intervals} {submitting} onRate={handleRate} />
     {/if}
 
@@ -179,3 +199,9 @@
     </p>
   {/if}
 </div>
+
+<AiPracticeModal
+  open={showAiPractice}
+  targetWords={reviewedWords.slice(0, 5)}
+  onClose={() => (showAiPractice = false)}
+/>
