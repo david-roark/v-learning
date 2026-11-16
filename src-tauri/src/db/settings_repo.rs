@@ -1,7 +1,7 @@
 use rusqlite::{Connection, OptionalExtension, params};
 
 use crate::error::AppResult;
-use crate::models::AiSettings;
+use crate::models::{AiSettings, WebDavSettings};
 
 fn get_key(conn: &Connection, key: &str) -> AppResult<Option<String>> {
     let val = conn
@@ -36,6 +36,21 @@ pub fn save_ai_settings(conn: &Connection, settings: &AiSettings) -> AppResult<(
     set_key(conn, "ai_base_url", settings.base_url.trim())?;
     set_key(conn, "ai_api_key", settings.api_key.trim())?;
     set_key(conn, "ai_model", settings.model.trim())?;
+    Ok(())
+}
+
+pub fn get_webdav_settings(conn: &Connection) -> AppResult<WebDavSettings> {
+    Ok(WebDavSettings {
+        url: get_key(conn, "webdav_url")?.unwrap_or_default(),
+        username: get_key(conn, "webdav_username")?.unwrap_or_default(),
+        password: get_key(conn, "webdav_password")?.unwrap_or_default(),
+    })
+}
+
+pub fn save_webdav_settings(conn: &Connection, settings: &WebDavSettings) -> AppResult<()> {
+    set_key(conn, "webdav_url", settings.url.trim())?;
+    set_key(conn, "webdav_username", settings.username.trim())?;
+    set_key(conn, "webdav_password", settings.password.trim())?;
     Ok(())
 }
 

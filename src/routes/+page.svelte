@@ -1,7 +1,19 @@
 <script lang="ts">
-  import { BookA, BookOpenText, Flame, Layers, Plus, Settings, Sparkles, Upload } from "@lucide/svelte";
+  import {
+    BarChart3,
+    BookA,
+    BookOpenText,
+    Cloud,
+    Flame,
+    Layers,
+    Plus,
+    Settings,
+    Sparkles,
+    Upload,
+  } from "@lucide/svelte";
   import { onMount } from "svelte";
   import AiSettingsModal from "$lib/features/ai-practice/AiSettingsModal.svelte";
+  import AnalyticsView from "$lib/features/analytics/AnalyticsView.svelte";
   import NoteFormModal from "$lib/features/card-editor/components/NoteFormModal.svelte";
   import { decksApi } from "$lib/features/decks/api";
   import DeckList from "$lib/features/decks/components/DeckList.svelte";
@@ -11,6 +23,7 @@
   import ReaderView from "$lib/features/reader/ReaderView.svelte";
   import { studyApi } from "$lib/features/study/api";
   import StudySession from "$lib/features/study/components/StudySession.svelte";
+  import SyncModal from "$lib/features/sync/SyncModal.svelte";
   import { invokeCmd } from "$lib/shared/tauri";
   import type { ApkgImportReport, DailyStats, DeckWithStats } from "$lib/shared/types";
 
@@ -18,10 +31,11 @@
   let stats = $state<DailyStats>({ reviewedToday: 0, newLearnedToday: 0, dueRemaining: 0 });
   let loading = $state(true);
 
-  let activeTab = $state<"decks" | "dictionary" | "reader">("decks");
+  let activeTab = $state<"decks" | "dictionary" | "reader" | "analytics">("decks");
   let activeDeck = $state<DeckWithStats | null>(null);
   let showDeckModal = $state(false);
   let showAiSettings = $state(false);
+  let showSyncModal = $state(false);
   let addCardTarget = $state<DeckWithStats | null>(null);
   let manageNotesTarget = $state<DeckWithStats | null>(null);
   let apkgMsg = $state("");
@@ -121,7 +135,26 @@
             <BookOpenText class="h-3.5 w-3.5" />
             Đọc & Khai thác
           </button>
+          <button
+            type="button"
+            onclick={() => (activeTab = "analytics")}
+            class="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 transition {activeTab === 'analytics'
+              ? 'bg-zinc-800 text-white'
+              : 'text-zinc-400 hover:text-zinc-200'}"
+          >
+            <BarChart3 class="h-3.5 w-3.5" />
+            Thống kê
+          </button>
         </div>
+
+        <button
+          type="button"
+          onclick={() => (showSyncModal = true)}
+          title="Sao lưu & Đồng bộ"
+          class="rounded-xl border border-zinc-800 bg-zinc-900 p-2 text-zinc-400 hover:text-zinc-200"
+        >
+          <Cloud class="h-4 w-4" />
+        </button>
 
         <button
           type="button"
@@ -163,6 +196,8 @@
     <DictionaryView {decks} onCardAdded={refreshDashboard} />
   {:else if activeTab === "reader"}
     <ReaderView {decks} onCardAdded={refreshDashboard} />
+  {:else if activeTab === "analytics"}
+    <AnalyticsView />
   {:else}
     <!-- Daily Stats Bar -->
     <div class="mb-8 grid grid-cols-3 gap-4">
@@ -226,3 +261,9 @@
 {/if}
 
 <AiSettingsModal open={showAiSettings} onClose={() => (showAiSettings = false)} />
+
+<SyncModal
+  open={showSyncModal}
+  onClose={() => (showSyncModal = false)}
+  onRestored={refreshDashboard}
+/>

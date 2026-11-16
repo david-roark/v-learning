@@ -1,3 +1,4 @@
+pub mod analytics_repo;
 pub mod card_repo;
 pub mod deck_repo;
 pub mod dict_repo;

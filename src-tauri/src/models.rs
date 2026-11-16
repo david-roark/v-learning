@@ -167,3 +167,45 @@ pub struct ApkgImportReport {
     pub imported: i64,
     pub skipped: i64,
 }
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HeatmapDay {
+    pub date: String,
+    pub count: i64,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ForecastDay {
+    pub date: String,
+    pub due_count: i64,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AnalyticsSummary {
+    pub streak_days: i64,
+    pub total_reviews: i64,
+    pub true_retention: f64,
+    pub mature_cards: i64,
+    pub heatmap: Vec<HeatmapDay>,
+    pub forecast_7d: Vec<ForecastDay>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WebDavSettings {
+    pub url: String,
+    pub username: String,
+    pub password: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BackupRestoreReport {
+    pub decks: i64,
+    pub notes: i64,
+    pub cards: i64,
+    pub review_logs: i64,
+}

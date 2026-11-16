@@ -182,5 +182,6 @@ CREATE TABLE review_logs (
 - [x] Trình đọc Text tích hợp & Import `.apkg` (Anki).
 
 ### Giai đoạn 4: Hoàn Thiện & Đồng Bộ (Mở rộng)
-- [ ] Cloud Sync (hỗ trợ tự đồng bộ qua WebDAV / S3 / Google Drive để giữ tính riêng tư).
-- [ ] Đóng gói bộ cài đặt chuẩn cho Windows (`.msi`/`.exe`), macOS (`.dmg`), Linux (`.AppImage`/`.deb`).
+- [x] Analytics Dashboard (90-day Heatmap, Streak, True Retention, Dự báo 7 ngày).
+- [x] Cloud Sync (Export/Restore JSON & WebDAV Push/Pull để giữ tính riêng tư).
+- [x] Sẵn sàng đóng gói đa nền tảng qua `npm run tauri build` (`.msi`/`.exe`, `.dmg`, `.AppImage`/`.deb`).

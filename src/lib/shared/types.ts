@@ -143,3 +143,35 @@ export interface ApkgImportReport {
   imported: number;
   skipped: number;
 }
+
+export interface HeatmapDay {
+  date: string;
+  count: number;
+}
+
+export interface ForecastDay {
+  date: string;
+  dueCount: number;
+}
+
+export interface AnalyticsSummary {
+  streakDays: number;
+  totalReviews: number;
+  trueRetention: number;
+  matureCards: number;
+  heatmap: HeatmapDay[];
+  forecast7d: ForecastDay[];
+}
+
+export interface WebDavSettings {
+  url: string;
+  username: string;
+  password: string;
+}
+
+export interface BackupRestoreReport {
+  decks: number;
+  notes: number;
+  cards: number;
+  reviewLogs: number;
+}

@@ -8,10 +8,13 @@ mod error;
 mod media;
 mod models;
 mod srs;
+mod sync;
 
 use tauri::Manager;
 
-use commands::{ai_cmd, anki_cmd, deck_cmd, dict_cmd, media_cmd, note_cmd, study_cmd};
+use commands::{
+    ai_cmd, analytics_cmd, anki_cmd, deck_cmd, dict_cmd, media_cmd, note_cmd, study_cmd, sync_cmd,
+};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -47,6 +50,13 @@ pub fn run() {
             ai_cmd::list_ai_models,
             ai_cmd::evaluate_ai_practice,
             anki_cmd::import_apkg,
+            analytics_cmd::get_analytics_summary,
+            sync_cmd::export_backup,
+            sync_cmd::import_backup,
+            sync_cmd::get_webdav_settings,
+            sync_cmd::save_webdav_settings,
+            sync_cmd::sync_webdav_push,
+            sync_cmd::sync_webdav_pull,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
