@@ -69,6 +69,17 @@
     sendCommand("playVideo");
   }
 
+  function handleTranscriptClick(e: MouseEvent) {
+    if ((window.getSelection()?.toString().trim().length ?? 0) > 0) return;
+    const target = e.target as HTMLElement | null;
+    const wordEl = target?.closest("[data-reader-word='true']") as HTMLElement | null;
+    if (!wordEl) return;
+    const text = wordEl.dataset.word ?? "";
+    const sentence = wordEl.dataset.sent ?? "";
+    if (!text) return;
+    onWordClick({ text, isWord: true, sentence }, wordEl.getBoundingClientRect());
+  }
+
   function handleWindowMessage(ev: MessageEvent) {
     if (typeof ev.data !== "string") return;
     if (!ev.origin.includes("youtube.com") && !ev.origin.includes("youtube-nocookie.com")) return;
@@ -145,7 +156,11 @@
           có thể mở file <code class="rounded bg-zinc-800 px-1">.srt/.vtt</code> để khai thác câu.
         </p>
       {:else}
-        <div class="space-y-1.5">
+        <div
+          role="presentation"
+          onclick={handleTranscriptClick}
+          class="yt-transcript-list space-y-1.5"
+        >
           {#each transcript as line, idx (idx)}
             {@const tokens = tokenizeWithSentences(line.text)}
             {@const isActive = idx === activeIndex}
@@ -172,20 +187,19 @@
               >
                 {#each tokens as tok, tIdx (tIdx)}
                   {#if tok.isWord}
-                    <button
-                      type="button"
+                    <span
                       data-reader-word="true"
-                      onclick={(e) =>
-                        onWordClick(tok, (e.currentTarget as HTMLElement).getBoundingClientRect())}
-                      class="select-text rounded px-0.5 transition hover:bg-indigo-500/25 hover:text-indigo-200 {selectedWord ===
+                      data-word={tok.text}
+                      data-sent={tok.sentence}
+                      class="cursor-pointer select-text rounded px-0.5 transition hover:bg-indigo-500/25 hover:text-indigo-200 {selectedWord ===
                       tok.text
                         ? 'bg-indigo-600/30 text-indigo-200'
                         : ''}"
                     >
                       {tok.text}
-                    </button>
+                    </span>
                   {:else}
-                    <span>{tok.text}</span>
+                    {tok.text}
                   {/if}
                 {/each}
               </div>
@@ -196,3 +210,10 @@
     </div>
   </div>
 </div>
+
+<style>
+  .yt-transcript-list > :global(*) {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 36px;
+  }
+</style>

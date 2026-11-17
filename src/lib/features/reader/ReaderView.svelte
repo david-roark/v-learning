@@ -109,7 +109,9 @@
   const displayText = $derived(
     sections.length > 0 ? (sections[sectionIndex]?.text ?? "") : articleText,
   );
-  const tokens = $derived(tokenizeWithSentences(displayText));
+  const tokens = $derived(
+    articleBlocks.length > 0 && sections.length === 0 ? [] : tokenizeWithSentences(displayText),
+  );
 
   const totalItems = $derived(pdfSession ? pdfSession.numPages : sections.length);
   const currentPos = $derived(pdfSession ? pdfPageNum - 1 : sectionIndex);
@@ -320,6 +322,18 @@
     await lookupAndSelect(tok.text, tok.sentence);
   }
 
+  function handleTextContainerClick(e: MouseEvent) {
+    if (editing) return;
+    if ((window.getSelection()?.toString().trim().length ?? 0) > 0) return;
+    const target = e.target as HTMLElement | null;
+    const wordEl = target?.closest("[data-reader-word='true']") as HTMLElement | null;
+    if (!wordEl) return;
+    const text = wordEl.dataset.word ?? "";
+    const sentence = wordEl.dataset.sent ?? "";
+    if (!text) return;
+    void handleWordClick({ text, isWord: true, sentence }, wordEl.getBoundingClientRect());
+  }
+
   function openManualLookup() {
     lookupAnchor = null;
     lookupOpen = true;
@@ -372,6 +386,7 @@
     sections = [];
     youtubeId = null;
     youtubeTranscript = [];
+    articleText = "";
     articleBlocks = [];
 
     try {
@@ -421,6 +436,7 @@
     editing = false;
     youtubeId = null;
     youtubeTranscript = [];
+    articleText = "";
     articleBlocks = [];
     await clearPdfSession();
 
@@ -774,30 +790,31 @@
             {#snippet renderTokens(tokenList: TextToken[])}
               {#each tokenList as tok, tIdx (tIdx)}
                 {#if tok.isWord}
-                  <button
-                    type="button"
+                  <span
                     data-reader-word="true"
-                    onclick={(e) =>
-                      handleWordClick(tok, (e.currentTarget as HTMLElement).getBoundingClientRect())}
-                    class="select-text rounded px-0.5 transition hover:bg-indigo-500/25 hover:text-indigo-200 {selectedToken?.text ===
+                    data-word={tok.text}
+                    data-sent={tok.sentence}
+                    class="cursor-pointer select-text rounded px-0.5 transition hover:bg-indigo-500/25 hover:text-indigo-200 {selectedToken?.text ===
                     tok.text
                       ? 'bg-indigo-600/30 text-indigo-200'
                       : ''}"
                   >
                     {tok.text}
-                  </button>
+                  </span>
                 {:else}
-                  <span>{tok.text}</span>
+                  {tok.text}
                 {/if}
               {/each}
             {/snippet}
 
             <div
               bind:this={textContainer}
+              role="presentation"
+              onclick={handleTextContainerClick}
               class="h-[calc(100dvh-9rem)] overflow-y-auto rounded-2xl border border-zinc-800 bg-zinc-900/70 p-4 text-base leading-8 text-zinc-200 sm:p-8 md:h-[calc(100vh-5.25rem)]"
             >
               {#if articleBlocks.length > 0 && sections.length === 0}
-                <article class="mx-auto max-w-3xl space-y-4">
+                <article class="reader-article mx-auto max-w-3xl space-y-4">
                   {#each articleBlocks as block, bIdx (bIdx)}
                     {@const blockTokens = tokenizeWithSentences(block.text)}
                     {#if block.tag === "h1"}
@@ -885,3 +902,10 @@
     />
   </div>
 {/if}
+
+<style>
+  .reader-article > :global(*) {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 48px;
+  }
+</style>
