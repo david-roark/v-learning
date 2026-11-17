@@ -164,7 +164,7 @@
     }
   });
 
-  function handleReaderTextSelect(e: MouseEvent) {
+  function handleReaderTextSelect(e: MouseEvent | TouchEvent) {
     if (editing) return;
     const target = e.target as Node | null;
     if (!target) return;
@@ -468,7 +468,11 @@
   });
 </script>
 
-<svelte:window onmouseup={handleReaderTextSelect} onkeydown={handleReaderKeydown} />
+<svelte:window
+  onmouseup={handleReaderTextSelect}
+  ontouchend={handleReaderTextSelect}
+  onkeydown={handleReaderKeydown}
+/>
 
 {#if !hasActiveContent}
   <ReaderHome
@@ -718,7 +722,7 @@
 
         <div
           bind:this={textContainer}
-          class="h-[calc(100vh-13.5rem)] overflow-y-auto rounded-2xl border border-zinc-800 bg-zinc-900/70 p-6 text-base leading-8 text-zinc-200"
+          class="h-[55vh] overflow-y-auto rounded-2xl border border-zinc-800 bg-zinc-900/70 p-4 text-base leading-8 text-zinc-200 sm:p-6 lg:h-[calc(100vh-13.5rem)]"
         >
           {#if articleBlocks.length > 0 && sections.length === 0}
             <article class="mx-auto max-w-3xl space-y-4">

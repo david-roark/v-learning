@@ -47,17 +47,20 @@
   ];
 </script>
 
-<div class="grid grid-cols-4 gap-3">
+<div class="grid grid-cols-4 gap-2 sm:gap-3">
   {#each options as opt (opt.rating)}
     <button
       type="button"
       disabled={submitting}
       onclick={() => onRate(opt.rating)}
-      class="flex flex-col items-center rounded-2xl border px-3 py-3 transition disabled:opacity-50 {opt.color}"
+      class="flex flex-col items-center rounded-2xl border px-1.5 py-2.5 transition disabled:opacity-50 sm:px-3 sm:py-3 {opt.color}"
     >
-      <span class="text-xs font-medium opacity-75">{opt.getInterval(intervals)}</span>
-      <span class="mt-0.5 text-sm font-semibold">{opt.label}</span>
-      <span class="mt-1 rounded bg-black/25 px-1.5 py-0.5 font-mono text-[10px] opacity-70">
+      <span class="text-[11px] font-medium opacity-75 sm:text-xs">{opt.getInterval(intervals)}</span
+      >
+      <span class="mt-0.5 text-xs font-semibold sm:text-sm">{opt.label}</span>
+      <span
+        class="mt-1 hidden rounded bg-black/25 px-1.5 py-0.5 font-mono text-[10px] opacity-70 sm:inline"
+      >
         {opt.key}
       </span>
     </button>

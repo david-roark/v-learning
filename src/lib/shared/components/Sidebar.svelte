@@ -42,7 +42,7 @@
 </script>
 
 <aside
-  class="flex h-full w-56 shrink-0 flex-col justify-between border-r border-zinc-800 bg-zinc-900/50 p-3.5 select-none"
+  class="hidden h-full w-56 shrink-0 flex-col justify-between border-r border-zinc-800 bg-zinc-900/50 p-3.5 select-none md:flex"
 >
   <div class="space-y-6">
     <!-- Brand -->
@@ -133,3 +133,23 @@
     </div>
   </div>
 </aside>
+
+<!-- Mobile Bottom Navigation Bar -->
+<nav
+  class="fixed inset-x-0 bottom-0 z-40 flex items-center justify-around border-t border-zinc-800 bg-zinc-950/95 px-1 pt-1.5 pb-[calc(0.375rem+env(safe-area-inset-bottom))] backdrop-blur md:hidden"
+>
+  {#each navItems as item (item.id)}
+    {@const Icon = item.icon}
+    {@const active = activeTab === item.id}
+    <button
+      type="button"
+      onclick={() => onSelectTab(item.id)}
+      class="flex flex-1 flex-col items-center gap-0.5 rounded-xl py-1 text-[10px] font-medium transition {active
+        ? 'text-indigo-400'
+        : 'text-zinc-400 hover:text-zinc-200'}"
+    >
+      <Icon class="h-4 w-4" />
+      <span class="truncate">{item.label}</span>
+    </button>
+  {/each}
+</nav>
