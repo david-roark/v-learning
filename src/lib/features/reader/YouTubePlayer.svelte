@@ -103,7 +103,7 @@
   });
 </script>
 
-<div class="flex h-[calc(100vh-8.5rem)] flex-col gap-3">
+<div class="flex h-[calc(100dvh-9rem)] flex-col gap-3 md:h-[calc(100vh-5.25rem)]">
   <div
     class="aspect-video max-h-[38%] shrink-0 w-full overflow-hidden rounded-2xl border border-zinc-800 bg-black sm:max-h-[45%]"
   >

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Cloud, Flame, Layers, Palette, Plus, Settings, Upload, Volume2 } from "@lucide/svelte";
+  import { Flame, Layers, Plus, Upload } from "@lucide/svelte";
   import { onMount } from "svelte";
   import AiSettingsModal from "$lib/features/ai-practice/AiSettingsModal.svelte";
   import AnalyticsView from "$lib/features/analytics/AnalyticsView.svelte";
@@ -31,18 +31,9 @@
   let showSyncModal = $state(false);
   let showAppearance = $state(false);
   let showTtsSettings = $state(false);
-  let showMobileMenu = $state(false);
   let addCardTarget = $state<DeckWithStats | null>(null);
   let manageNotesTarget = $state<DeckWithStats | null>(null);
   let apkgMsg = $state("");
-
-  const TAB_TITLES: Record<NavTab, string> = {
-    decks: "Bộ thẻ của bạn",
-    dictionary: "Từ điển Offline & Online",
-    reader: "Đọc báo, Sách & Video",
-    games: "Mini-game ôn từ vựng",
-    analytics: "Thống kê học tập",
-  };
 
   async function refreshDashboard() {
     loading = true;
@@ -118,97 +109,10 @@
     />
 
     <div class="flex flex-1 flex-col overflow-hidden">
-      <!-- Compact Toolbar -->
-      <header
-        class="relative flex h-14 shrink-0 items-center justify-between border-b border-zinc-800 px-4 pt-[env(safe-area-inset-top)] sm:px-6"
-      >
-        <h2 class="truncate text-sm font-semibold text-white">{TAB_TITLES[activeTab]}</h2>
-
-        <div class="flex items-center gap-2">
-          {#if activeTab === "decks"}
-            <label
-              class="inline-flex cursor-pointer items-center gap-1.5 rounded-xl border border-zinc-700 px-2.5 py-1.5 text-xs font-medium text-zinc-300 hover:bg-zinc-800 sm:px-3"
-            >
-              <Upload class="h-3.5 w-3.5" />
-              <span class="hidden sm:inline">Import .apkg</span>
-              <span class="sm:hidden">Import</span>
-              <input type="file" accept=".apkg" onchange={handleImportApkg} class="hidden" />
-            </label>
-            <button
-              type="button"
-              onclick={() => (showDeckModal = true)}
-              class="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-indigo-500 sm:px-3.5"
-            >
-              <Plus class="h-3.5 w-3.5" />
-              <span class="hidden sm:inline">Bộ thẻ mới</span>
-              <span class="sm:hidden">Mới</span>
-            </button>
-          {/if}
-
-          <button
-            type="button"
-            onclick={() => (showMobileMenu = !showMobileMenu)}
-            title="Cài đặt"
-            class="rounded-xl border border-zinc-700 p-1.5 text-zinc-300 hover:bg-zinc-800 md:hidden"
-          >
-            <Settings class="h-4 w-4" />
-          </button>
-        </div>
-
-        {#if showMobileMenu}
-          <div
-            class="absolute top-14 right-4 z-50 w-52 space-y-1 rounded-2xl border border-zinc-800 bg-zinc-900 p-2 shadow-xl md:hidden"
-          >
-            <button
-              type="button"
-              onclick={() => {
-                showMobileMenu = false;
-                showAppearance = true;
-              }}
-              class="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-xs text-zinc-200 hover:bg-zinc-800"
-            >
-              <Palette class="h-4 w-4 text-indigo-400" />
-              Giao diện & Font
-            </button>
-            <button
-              type="button"
-              onclick={() => {
-                showMobileMenu = false;
-                showTtsSettings = true;
-              }}
-              class="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-xs text-zinc-200 hover:bg-zinc-800"
-            >
-              <Volume2 class="h-4 w-4 text-indigo-400" />
-              Phát âm (TTS)
-            </button>
-            <button
-              type="button"
-              onclick={() => {
-                showMobileMenu = false;
-                showSyncModal = true;
-              }}
-              class="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-xs text-zinc-200 hover:bg-zinc-800"
-            >
-              <Cloud class="h-4 w-4 text-indigo-400" />
-              Sao lưu & Sync
-            </button>
-            <button
-              type="button"
-              onclick={() => {
-                showMobileMenu = false;
-                showAiSettings = true;
-              }}
-              class="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-xs text-zinc-200 hover:bg-zinc-800"
-            >
-              <Settings class="h-4 w-4 text-indigo-400" />
-              Cấu hình AI
-            </button>
-          </div>
-        {/if}
-      </header>
-
       <!-- Scrollable Main Workspace -->
-      <main class="flex-1 overflow-y-auto p-3.5 pb-20 sm:p-5 md:pb-5">
+      <main
+        class="flex-1 overflow-y-auto px-3.5 pt-[max(0.75rem,env(safe-area-inset-top))] pb-20 sm:px-5 sm:pt-4 md:pb-4"
+      >
         <div class="mx-auto w-full max-w-7xl">
           {#if apkgMsg && activeTab === "decks"}
             <p
@@ -223,6 +127,23 @@
           {:else if activeTab === "analytics"}
             <AnalyticsView />
           {:else if activeTab === "decks"}
+            <div class="mb-4 flex items-center justify-end gap-2">
+              <label
+                class="inline-flex cursor-pointer items-center gap-1.5 rounded-xl border border-zinc-700 px-3 py-1.5 text-xs font-medium text-zinc-300 hover:bg-zinc-800"
+              >
+                <Upload class="h-3.5 w-3.5" />
+                Import .apkg
+                <input type="file" accept=".apkg" onchange={handleImportApkg} class="hidden" />
+              </label>
+              <button
+                type="button"
+                onclick={() => (showDeckModal = true)}
+                class="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-3.5 py-1.5 text-xs font-semibold text-white transition hover:bg-indigo-500"
+              >
+                <Plus class="h-3.5 w-3.5" />
+                Bộ thẻ mới
+              </button>
+            </div>
             <div class="mb-5 grid grid-cols-1 gap-3 sm:mb-6 sm:grid-cols-3 sm:gap-4">
               <div class="rounded-2xl border border-zinc-800/80 bg-zinc-900/60 p-4">
                 <div class="flex items-center gap-2 text-xs font-medium text-zinc-400">

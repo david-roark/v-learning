@@ -31,6 +31,8 @@
     onOpenAiSettings,
   }: Props = $props();
 
+  let showMobileSettings = $state(false);
+
   const navItems: Array<{ id: NavTab; label: string; shortcut: string; icon: typeof Layers }> = [
     { id: "decks", label: "Bộ thẻ", shortcut: "1", icon: Layers },
     { id: "dictionary", label: "Từ điển", shortcut: "2", icon: BookA },
@@ -134,6 +136,57 @@
 </aside>
 
 <!-- Mobile Bottom Navigation Bar -->
+{#if showMobileSettings}
+  <div
+    class="fixed right-2 bottom-16 z-50 w-52 space-y-1 rounded-2xl border border-zinc-800 bg-zinc-900/95 p-2 shadow-2xl backdrop-blur-md md:hidden"
+  >
+    <button
+      type="button"
+      onclick={() => {
+        showMobileSettings = false;
+        onOpenAppearance();
+      }}
+      class="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-xs text-zinc-200 hover:bg-zinc-800"
+    >
+      <Palette class="h-4 w-4 text-indigo-400" />
+      Giao diện & Font
+    </button>
+    <button
+      type="button"
+      onclick={() => {
+        showMobileSettings = false;
+        onOpenTtsSettings();
+      }}
+      class="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-xs text-zinc-200 hover:bg-zinc-800"
+    >
+      <Volume2 class="h-4 w-4 text-indigo-400" />
+      Phát âm (TTS)
+    </button>
+    <button
+      type="button"
+      onclick={() => {
+        showMobileSettings = false;
+        onOpenSync();
+      }}
+      class="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-xs text-zinc-200 hover:bg-zinc-800"
+    >
+      <Cloud class="h-4 w-4 text-indigo-400" />
+      Sao lưu & Sync
+    </button>
+    <button
+      type="button"
+      onclick={() => {
+        showMobileSettings = false;
+        onOpenAiSettings();
+      }}
+      class="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-xs text-zinc-200 hover:bg-zinc-800"
+    >
+      <Settings class="h-4 w-4 text-indigo-400" />
+      Cấu hình AI
+    </button>
+  </div>
+{/if}
+
 <nav
   class="fixed inset-x-0 bottom-0 z-40 flex items-center justify-around border-t border-zinc-800 bg-zinc-950/95 px-1 pt-1.5 pb-[calc(0.375rem+env(safe-area-inset-bottom))] backdrop-blur md:hidden"
 >
@@ -142,7 +195,10 @@
     {@const active = activeTab === item.id}
     <button
       type="button"
-      onclick={() => onSelectTab(item.id)}
+      onclick={() => {
+        showMobileSettings = false;
+        onSelectTab(item.id);
+      }}
       class="flex flex-1 flex-col items-center gap-0.5 rounded-xl py-1 text-[10px] font-medium transition {active
         ? 'text-indigo-400'
         : 'text-zinc-400 hover:text-zinc-200'}"
@@ -151,4 +207,14 @@
       <span class="truncate">{item.label}</span>
     </button>
   {/each}
+  <button
+    type="button"
+    onclick={() => (showMobileSettings = !showMobileSettings)}
+    class="flex flex-1 flex-col items-center gap-0.5 rounded-xl py-1 text-[10px] font-medium transition {showMobileSettings
+      ? 'text-indigo-400'
+      : 'text-zinc-400 hover:text-zinc-200'}"
+  >
+    <Settings class="h-4 w-4" />
+    <span class="truncate">Cài đặt</span>
+  </button>
 </nav>

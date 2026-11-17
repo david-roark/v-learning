@@ -742,7 +742,7 @@
           rows="16"
           bind:value={articleText}
           placeholder="Dán đoạn văn hoặc bài báo tiếng Anh vào đây..."
-          class="h-[calc(100vh-8.5rem)] w-full rounded-2xl border border-zinc-700 bg-zinc-900 p-4 text-sm leading-relaxed text-zinc-100 focus:border-indigo-500 focus:outline-none"
+          class="h-[calc(100dvh-9rem)] w-full rounded-2xl border border-zinc-700 bg-zinc-900 p-4 text-sm leading-relaxed text-zinc-100 focus:border-indigo-500 focus:outline-none md:h-[calc(100vh-5.25rem)]"
         ></textarea>
       {:else if youtubeId}
         <div bind:this={youtubeContainer}>
@@ -763,7 +763,7 @@
           {#if pdfSession}
             <div
               bind:this={pdfContainer}
-              class="flex h-[calc(100vh-8.5rem)] items-start justify-center overflow-auto rounded-2xl border border-zinc-800 bg-zinc-950 p-2 sm:p-4"
+              class="flex h-[calc(100dvh-9rem)] items-start justify-center overflow-auto rounded-2xl border border-zinc-800 bg-zinc-950 p-2 sm:p-4 md:h-[calc(100vh-5.25rem)]"
             >
               <div class="relative inline-block shadow-lg">
                 <canvas bind:this={pdfCanvas} class="block rounded-lg"></canvas>
@@ -794,7 +794,7 @@
 
             <div
               bind:this={textContainer}
-              class="h-[calc(100vh-8.5rem)] overflow-y-auto rounded-2xl border border-zinc-800 bg-zinc-900/70 p-4 text-base leading-8 text-zinc-200 sm:p-8"
+              class="h-[calc(100dvh-9rem)] overflow-y-auto rounded-2xl border border-zinc-800 bg-zinc-900/70 p-4 text-base leading-8 text-zinc-200 sm:p-8 md:h-[calc(100vh-5.25rem)]"
             >
               {#if articleBlocks.length > 0 && sections.length === 0}
                 <article class="mx-auto max-w-3xl space-y-4">
