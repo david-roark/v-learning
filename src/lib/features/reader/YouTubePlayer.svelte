@@ -11,7 +11,7 @@
     videoId: string;
     transcript: TranscriptLine[];
     selectedWord?: string;
-    onWordClick: (tok: TextToken) => void;
+    onWordClick: (tok: TextToken, rect?: DOMRect) => void;
   }
 
   let { videoId, transcript, selectedWord = "", onWordClick }: Props = $props();
@@ -103,9 +103,9 @@
   });
 </script>
 
-<div class="flex h-[calc(100vh-13.5rem)] flex-col gap-3">
+<div class="flex h-[calc(100vh-8.5rem)] flex-col gap-3">
   <div
-    class="aspect-video max-h-[45%] w-full overflow-hidden rounded-2xl border border-zinc-800 bg-black"
+    class="aspect-video max-h-[38%] shrink-0 w-full overflow-hidden rounded-2xl border border-zinc-800 bg-black sm:max-h-[45%]"
   >
     <iframe
       bind:this={iframeEl}
@@ -174,7 +174,9 @@
                   {#if tok.isWord}
                     <button
                       type="button"
-                      onclick={() => onWordClick(tok)}
+                      data-reader-word="true"
+                      onclick={(e) =>
+                        onWordClick(tok, (e.currentTarget as HTMLElement).getBoundingClientRect())}
                       class="select-text rounded px-0.5 transition hover:bg-indigo-500/25 hover:text-indigo-200 {selectedWord ===
                       tok.text
                         ? 'bg-indigo-600/30 text-indigo-200'
