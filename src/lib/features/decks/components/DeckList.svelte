@@ -117,7 +117,7 @@
         {@const progressPct =
           deck.totalCards > 0 ? Math.round((learnedCount / deck.totalCards) * 100) : 0}
         <div
-          class="group flex flex-col justify-between rounded-2xl border p-5 transition {readyCount >
+          class="group @container min-w-0 flex flex-col justify-between rounded-2xl border p-4 transition sm:p-5 {readyCount >
           0
             ? 'border-zinc-800 bg-zinc-900/80 hover:border-indigo-500/50 hover:bg-zinc-900'
             : 'border-zinc-800/80 bg-zinc-900/50 hover:border-zinc-700'}"
@@ -186,35 +186,42 @@
           </div>
 
           <!-- Actions -->
-          <div class="mt-4 flex items-center gap-2 border-t border-zinc-800/80 pt-3.5">
+          <div class="mt-4 flex items-center gap-1.5 border-t border-zinc-800/80 pt-3.5 @[240px]:gap-2">
             <button
               type="button"
               onclick={() => onStudy(deck)}
               disabled={readyCount === 0}
-              class="flex flex-1 items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-xs font-semibold whitespace-nowrap transition {readyCount >
+              title={readyCount > 0 ? `Học ngay (${readyCount})` : "Đã xong"}
+              class="flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-xl px-2.5 py-2 text-xs font-semibold transition {readyCount >
               0
                 ? 'bg-indigo-600 text-white hover:bg-indigo-500'
                 : 'cursor-not-allowed border border-zinc-700 bg-zinc-800 text-zinc-300 opacity-75'}"
             >
               <Play class="h-3.5 w-3.5 shrink-0" />
-              {readyCount > 0 ? `Học ngay (${readyCount})` : "Đã xong"}
+              {#if readyCount > 0}
+                <span class="truncate">
+                  <span class="hidden @[260px]:inline">Học ngay </span>({readyCount})
+                </span>
+              {:else}
+                <span class="hidden truncate @[210px]:inline">Đã xong</span>
+              {/if}
             </button>
             <button
               type="button"
               onclick={() => onAddCard(deck)}
               title="Thêm thẻ mới"
-              class="inline-flex items-center gap-1 rounded-xl border border-zinc-700 px-3 py-2 text-xs font-medium text-zinc-300 hover:bg-zinc-800"
+              class="inline-flex shrink-0 items-center justify-center gap-1 rounded-xl border border-zinc-700 p-2 text-xs font-medium text-zinc-300 hover:bg-zinc-800 @[240px]:px-3"
             >
-              <Plus class="h-3.5 w-3.5" />
-              Thẻ
+              <Plus class="h-3.5 w-3.5 shrink-0" />
+              <span class="hidden @[240px]:inline">Thẻ</span>
             </button>
             <button
               type="button"
               onclick={() => onManageNotes(deck)}
               title="Xem danh sách thẻ"
-              class="inline-flex items-center rounded-xl border border-zinc-700 p-2 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200"
+              class="inline-flex shrink-0 items-center justify-center rounded-xl border border-zinc-700 p-2 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200"
             >
-              <List class="h-3.5 w-3.5" />
+              <List class="h-3.5 w-3.5 shrink-0" />
             </button>
           </div>
         </div>
