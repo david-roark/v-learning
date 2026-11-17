@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { BookOpen, List, Play, Plus, Trash2 } from "@lucide/svelte";
+  import { AlertTriangle, BookOpen, List, Play, Plus, Trash2 } from "@lucide/svelte";
   import type { DeckWithStats } from "$lib/shared/types";
 
   interface Props {
@@ -12,7 +12,24 @@
   }
 
   let { decks, onStudy, onAddCard, onManageNotes, onDelete, onCreateDeck }: Props = $props();
+
+  let confirmDeleteTarget = $state<DeckWithStats | null>(null);
+
+  function handleConfirmDelete() {
+    if (!confirmDeleteTarget) return;
+    const target = confirmDeleteTarget;
+    confirmDeleteTarget = null;
+    onDelete(target);
+  }
 </script>
+
+<svelte:window
+  onkeydown={(e) => {
+    if (confirmDeleteTarget && e.key === "Escape") {
+      confirmDeleteTarget = null;
+    }
+  }}
+/>
 
 {#if decks.length === 0}
   <div
@@ -46,9 +63,9 @@
             <h3 class="text-base font-semibold text-zinc-100">{deck.name}</h3>
             <button
               type="button"
-              onclick={() => onDelete(deck)}
+              onclick={() => (confirmDeleteTarget = deck)}
               title="Xoá bộ thẻ"
-              class="rounded-lg p-1.5 text-zinc-500 opacity-0 transition group-hover:opacity-100 hover:bg-rose-500/10 hover:text-rose-400"
+              class="rounded-lg p-1.5 text-zinc-500 transition sm:opacity-0 sm:group-hover:opacity-100 hover:bg-rose-500/10 hover:text-rose-400"
             >
               <Trash2 class="h-4 w-4" />
             </button>
@@ -98,5 +115,55 @@
         </div>
       </div>
     {/each}
+  </div>
+{/if}
+
+{#if confirmDeleteTarget}
+  <div
+    class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-xs"
+    role="presentation"
+    onclick={(e) => {
+      if (e.target === e.currentTarget) confirmDeleteTarget = null;
+    }}
+  >
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="delete-deck-title"
+      class="w-full max-w-md rounded-2xl border border-zinc-800 bg-zinc-900 p-6 shadow-2xl"
+    >
+      <div class="flex items-start gap-3">
+        <div class="shrink-0 rounded-xl bg-rose-500/15 p-2.5 text-rose-400">
+          <AlertTriangle class="h-5 w-5" />
+        </div>
+        <div>
+          <h3 id="delete-deck-title" class="text-base font-semibold text-white">
+            Xoá bộ thẻ "{confirmDeleteTarget.name}"?
+          </h3>
+          <p class="mt-1.5 text-xs leading-relaxed text-zinc-400">
+            Bộ thẻ này đang có <strong class="text-zinc-200">{confirmDeleteTarget.totalCards}</strong>
+            thẻ. Toàn bộ từ vựng, thẻ và lịch sử ôn tập thuộc bộ này sẽ bị xoá vĩnh viễn và không thể
+            hoàn tác.
+          </p>
+        </div>
+      </div>
+
+      <div class="mt-6 flex justify-end gap-2.5">
+        <button
+          type="button"
+          onclick={() => (confirmDeleteTarget = null)}
+          class="rounded-xl border border-zinc-700 px-4 py-2 text-xs font-medium text-zinc-300 hover:bg-zinc-800"
+        >
+          Huỷ
+        </button>
+        <button
+          type="button"
+          onclick={handleConfirmDelete}
+          class="rounded-xl bg-rose-600 px-4 py-2 text-xs font-semibold text-white hover:bg-rose-500"
+        >
+          Xoá vĩnh viễn
+        </button>
+      </div>
+    </div>
   </div>
 {/if}
