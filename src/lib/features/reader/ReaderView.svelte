@@ -1,21 +1,13 @@
 <script lang="ts">
   import {
     ArrowLeft,
-    BookOpenText,
     ChevronLeft,
     ChevronRight,
-    Clock,
-    FileText,
     Globe,
     Loader2,
     Maximize2,
     MoveHorizontal,
-    Play,
-    Plus,
-    Search,
-    Trash2,
     Upload,
-    Volume2,
     ZoomIn,
     ZoomOut,
   } from "@lucide/svelte";
@@ -23,11 +15,11 @@
   import { notesApi } from "$lib/features/card-editor/api";
   import { decksApi } from "$lib/features/decks/api";
   import { dictionaryApi } from "$lib/features/dictionary/api";
-  import { playWordAudio } from "$lib/shared/audio";
   import Select from "$lib/shared/components/Select.svelte";
   import { invokeCmd } from "$lib/shared/tauri";
   import type { DeckWithStats, DictionaryEntry } from "$lib/shared/types";
   import { openPdfSession, type BookSection, type PdfFitMode, type PdfSession } from "./pdfParser";
+  import ReaderHome from "./ReaderHome.svelte";
   import {
     clearAllHistory,
     loadCachedReaderFile,
@@ -37,6 +29,7 @@
     updateHistoryPosition,
     type ReaderHistoryItem,
   } from "./readerHistory";
+  import ReaderLookupSidebar from "./ReaderLookupSidebar.svelte";
   import { stripSubtitleMetadata, tokenizeWithSentences, type TextToken } from "./textParser";
   import YouTubePlayer, { type TranscriptLine } from "./YouTubePlayer.svelte";
 
@@ -470,15 +463,6 @@
     activeHistoryId = null;
   }
 
-  function formatRelativeTime(ts: number): string {
-    const mins = Math.floor((Date.now() - ts) / 60000);
-    if (mins < 1) return "vừa xong";
-    if (mins < 60) return `${mins} phút trước`;
-    const hours = Math.floor(mins / 60);
-    if (hours < 24) return `${hours} giờ trước`;
-    return `${Math.floor(hours / 24)} ngày trước`;
-  }
-
   onDestroy(() => {
     void clearPdfSession();
   });
@@ -487,187 +471,23 @@
 <svelte:window onmouseup={handleReaderTextSelect} onkeydown={handleReaderKeydown} />
 
 {#if !hasActiveContent}
-  <div class="mx-auto max-w-5xl space-y-5">
-    <!-- Hero Input Bar -->
-    <div class="space-y-3 rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5">
-      <div class="flex flex-wrap items-center justify-between gap-3">
-        <div class="flex items-center gap-3">
-          <div class="rounded-xl bg-indigo-500/15 p-2.5 text-indigo-400">
-            <BookOpenText class="h-5 w-5" />
-          </div>
-          <div>
-            <h2 class="text-sm font-semibold text-white">Đọc báo, Sách & Video</h2>
-            <p class="text-xs text-zinc-400">
-              Click 1 từ hoặc bôi đen cả cụm từ / câu để tra nghĩa & lưu flashcard ngay.
-            </p>
-          </div>
-        </div>
-
-        <div class="flex flex-wrap items-center gap-2">
-          <label
-            class="inline-flex cursor-pointer items-center gap-1.5 rounded-xl border border-zinc-700 bg-zinc-950/60 px-3.5 py-2 text-xs font-medium text-zinc-200 hover:border-indigo-500 hover:bg-zinc-800"
-          >
-            <Upload class="h-3.5 w-3.5 text-indigo-400" />
-            {parsingFile ? "Đang mở..." : "Mở file (.pdf, .epub, .txt, .srt)"}
-            <input
-              type="file"
-              accept=".epub,.pdf,.txt,.md,.srt,.vtt"
-              onchange={handleFileUpload}
-              class="hidden"
-            />
-          </label>
-          <button
-            type="button"
-            onclick={() => {
-              bookTitle = "Văn bản tùy chỉnh";
-              editing = true;
-            }}
-            class="rounded-xl border border-zinc-700 bg-zinc-950/60 px-3.5 py-2 text-xs font-medium text-zinc-200 hover:border-indigo-500 hover:bg-zinc-800"
-          >
-            Dán văn bản
-          </button>
-        </div>
-      </div>
-
-      <form onsubmit={handleLoadUrl} class="flex gap-2">
-        <div class="relative flex-1">
-          <Globe class="absolute top-1/2 left-3.5 h-4 w-4 -translate-y-1/2 text-zinc-500" />
-          <input
-            type="url"
-            bind:value={webUrl}
-            placeholder="Dán link bài báo hoặc video YouTube (https://...)..."
-            class="w-full rounded-xl border border-zinc-700 bg-zinc-950 py-2.5 pr-4 pl-10 text-xs text-white placeholder-zinc-500 focus:border-indigo-500 focus:outline-none"
-          />
-        </div>
-        <button
-          type="submit"
-          disabled={parsingFile || !webUrl.trim()}
-          class="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-5 py-2.5 text-xs font-semibold text-white hover:bg-indigo-500 disabled:opacity-40"
-        >
-          {#if parsingFile}
-            <Loader2 class="h-3.5 w-3.5 animate-spin" />
-            Đang tải...
-          {:else}
-            Mở URL
-          {/if}
-        </button>
-      </form>
-
-      {#if parsingFile}
-        <div
-          class="flex items-center gap-2.5 rounded-xl border border-indigo-500/30 bg-indigo-500/10 px-3.5 py-2.5 text-xs text-indigo-200"
-        >
-          <Loader2 class="h-4 w-4 shrink-0 animate-spin text-indigo-400" />
-          <span class="truncate">Đang tải nội dung: <strong>{loadingTarget}</strong>...</span>
-        </div>
-      {/if}
-
-      {#if error}
-        <p class="rounded-xl bg-rose-500/10 px-3.5 py-2 text-xs text-rose-400">{error}</p>
-      {/if}
-    </div>
-
-    <!-- Recent History Grid -->
-    <div class="space-y-3">
-      <div class="flex items-center justify-between px-1">
-        <div class="flex items-center gap-2 text-xs font-semibold text-zinc-300">
-          <Clock class="h-4 w-4 text-indigo-400" />
-          <span>Gần đây ({history.length})</span>
-        </div>
-        {#if history.length > 0}
-          <button
-            type="button"
-            onclick={handleClearHistory}
-            class="text-xs text-zinc-400 hover:text-rose-400"
-          >
-            Xóa tất cả
-          </button>
-        {/if}
-      </div>
-
-      {#if history.length === 0}
-        <div
-          class="rounded-2xl border border-dashed border-zinc-800 bg-zinc-900/30 py-14 text-center text-xs text-zinc-500"
-        >
-          Chưa có lịch sử đọc gần đây. Hãy dán một đường link YouTube/bài báo hoặc mở file sách ở
-          trên.
-        </div>
-      {:else}
-        <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {#each history as item (item.id)}
-            {@const isOpening = openingHistoryId === item.id}
-            <div
-              class="group relative flex flex-col justify-between rounded-2xl border p-4 transition {isOpening
-                ? 'border-indigo-500 bg-indigo-500/15 shadow-lg shadow-indigo-500/10'
-                : parsingFile
-                  ? 'pointer-events-none border-zinc-800/70 bg-zinc-900/40 opacity-50'
-                  : 'border-zinc-800/90 bg-zinc-900/60 hover:border-indigo-500/50 hover:bg-zinc-900'}"
-            >
-              <button
-                type="button"
-                disabled={parsingFile}
-                onclick={() => handleOpenHistoryItem(item)}
-                class="flex flex-col items-start text-left"
-              >
-                <div class="mb-2.5 flex w-full items-center justify-between gap-2">
-                  <span
-                    class="inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-[10px] font-medium {item.kind ===
-                    'youtube'
-                      ? 'bg-rose-500/15 text-rose-300'
-                      : item.kind === 'article'
-                        ? 'bg-sky-500/15 text-sky-300'
-                        : item.kind === 'pdf'
-                          ? 'bg-amber-500/15 text-amber-300'
-                          : 'bg-emerald-500/15 text-emerald-300'}"
-                  >
-                    {#if isOpening}
-                      <Loader2 class="h-3 w-3 animate-spin" />
-                      Đang mở...
-                    {:else if item.kind === "youtube"}
-                      <Play class="h-3 w-3" />
-                      YouTube
-                    {:else if item.kind === "article"}
-                      <Globe class="h-3 w-3" />
-                      Web
-                    {:else}
-                      <FileText class="h-3 w-3" />
-                      {item.kind.toUpperCase()}
-                    {/if}
-                  </span>
-                  <span class="text-[11px] text-zinc-500">{formatRelativeTime(item.openedAt)}</span>
-                </div>
-
-                <h3 class="line-clamp-2 pr-5 text-sm font-semibold text-zinc-100">
-                  {item.title}
-                </h3>
-                <p class="mt-1 line-clamp-1 w-full text-[11px] text-zinc-400">{item.subtitle}</p>
-              </button>
-
-              <div class="mt-3 flex items-center justify-between border-t border-zinc-800/70 pt-2">
-                <span class="text-[11px] text-zinc-400">
-                  {#if item.lastPos !== undefined}
-                    Đang đọc: {item.kind === "pdf"
-                      ? `Trang ${item.lastPos}`
-                      : `Chương ${item.lastPos + 1}`}
-                  {:else}
-                    Nhấn để mở lại
-                  {/if}
-                </span>
-                <button
-                  type="button"
-                  onclick={() => handleDeleteHistoryItem(item.id)}
-                  title="Xóa khỏi lịch sử"
-                  class="rounded-lg p-1 text-zinc-500 opacity-70 transition hover:bg-zinc-800 hover:text-rose-400 group-hover:opacity-100"
-                >
-                  <Trash2 class="h-3.5 w-3.5" />
-                </button>
-              </div>
-            </div>
-          {/each}
-        </div>
-      {/if}
-    </div>
-  </div>
+  <ReaderHome
+    bind:webUrl
+    {parsingFile}
+    {loadingTarget}
+    {openingHistoryId}
+    {error}
+    {history}
+    onLoadUrl={handleLoadUrl}
+    onFileUpload={handleFileUpload}
+    onStartPasteText={() => {
+      bookTitle = "Văn bản tùy chỉnh";
+      editing = true;
+    }}
+    onOpenHistoryItem={handleOpenHistoryItem}
+    onDeleteHistoryItem={handleDeleteHistoryItem}
+    onClearHistory={handleClearHistory}
+  />
 {:else}
   <div bind:this={readerRoot} class="grid gap-4 lg:grid-cols-12">
     <div class="flex flex-col space-y-3 lg:col-span-8 xl:col-span-9">
@@ -878,7 +698,7 @@
         </div>
       {:else}
         {#snippet renderTokens(tokenList: TextToken[])}
-          {#each tokenList as tok}
+          {#each tokenList as tok, tIdx (tIdx)}
             {#if tok.isWord}
               <button
                 type="button"
@@ -902,7 +722,7 @@
         >
           {#if articleBlocks.length > 0 && sections.length === 0}
             <article class="mx-auto max-w-3xl space-y-4">
-              {#each articleBlocks as block}
+              {#each articleBlocks as block, bIdx (bIdx)}
                 {@const blockTokens = tokenizeWithSentences(block.text)}
                 {#if block.tag === "h1"}
                   <h1 class="text-2xl leading-snug font-bold text-white">
@@ -941,211 +761,21 @@
       {/if}
     </div>
 
-    <!-- Side Lookup Panel -->
-    <div
-      class="h-fit space-y-3 rounded-2xl border border-zinc-800 bg-zinc-900/70 p-4 lg:sticky lg:top-0 lg:col-span-4 xl:col-span-3"
-    >
-      <h3 class="text-sm font-semibold text-white">Tra cứu nhanh</h3>
-
-      <div class="flex items-center gap-1.5">
-        {#if decks.length > 0}
-          <Select
-            options={decks.map((d) => ({ value: d.id, label: d.name }))}
-            bind:value={selectedDeckId}
-            prefix="Lưu vào: "
-            class="flex-1"
-          />
-        {:else}
-          <span class="flex-1 text-xs text-zinc-400">Chưa có bộ thẻ nào</span>
-        {/if}
-        <button
-          type="button"
-          onclick={() => (creatingDeck = !creatingDeck)}
-          title="Tạo nhanh bộ thẻ mới"
-          class="shrink-0 rounded-xl border border-zinc-700 p-2 text-zinc-300 hover:border-indigo-500 hover:text-indigo-300"
-        >
-          <Plus class="h-3.5 w-3.5" />
-        </button>
-      </div>
-
-      {#if creatingDeck}
-        <form onsubmit={handleQuickCreateDeck} class="flex gap-1.5">
-          <input
-            type="text"
-            bind:value={newDeckName}
-            placeholder="Tên bộ thẻ mới..."
-            class="flex-1 rounded-xl border border-zinc-700 bg-zinc-950 px-2.5 py-1.5 text-xs text-white placeholder-zinc-500 focus:border-indigo-500 focus:outline-none"
-          />
-          <button
-            type="submit"
-            disabled={!newDeckName.trim()}
-            class="rounded-xl bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-indigo-500 disabled:opacity-40"
-          >
-            Tạo
-          </button>
-        </form>
-      {/if}
-
-      <form onsubmit={handleManualSearch} class="flex gap-1.5">
-        <div class="relative flex-1">
-          <Search class="absolute top-1/2 left-2.5 h-3.5 w-3.5 -translate-y-1/2 text-zinc-500" />
-          <input
-            type="text"
-            bind:value={manualQuery}
-            placeholder="Nhập từ, cụm từ hoặc câu..."
-            class="w-full rounded-xl border border-zinc-700 bg-zinc-950 py-2 pr-2.5 pl-8 text-xs text-white placeholder-zinc-500 focus:border-indigo-500 focus:outline-none"
-          />
-        </div>
-        <button
-          type="submit"
-          disabled={lookingUp || !manualQuery.trim()}
-          class="rounded-xl bg-zinc-800 px-3 py-2 text-xs font-medium text-zinc-200 hover:bg-indigo-600 hover:text-white disabled:opacity-40"
-        >
-          Tra
-        </button>
-      </form>
-
-      {#if lookingUp}
-        <p class="py-6 text-center text-xs text-zinc-400">Đang tra từ...</p>
-      {:else if lookupResult}
-        <div class="space-y-3 border-t border-zinc-800 pt-3">
-          <div class="flex items-center justify-between">
-            <div>
-              <div class="flex flex-wrap items-center gap-1.5">
-                <p class="text-lg font-bold text-white">{lookupResult.word}</p>
-                {#if lookupResult.matchedForm}
-                  <span class="rounded bg-amber-500/15 px-1.5 py-0.5 text-[10px] text-amber-300">
-                    ← {lookupResult.matchedForm}
-                  </span>
-                {/if}
-              </div>
-              <div class="flex flex-wrap gap-2 font-mono text-xs">
-                {#if lookupResult.ipaUs}
-                  <span class="text-indigo-400">US {lookupResult.ipaUs}</span>
-                {/if}
-                {#if lookupResult.ipaUk && lookupResult.ipaUk !== lookupResult.ipaUs}
-                  <span class="text-sky-400">UK {lookupResult.ipaUk}</span>
-                {:else if !lookupResult.ipaUs && lookupResult.ipa}
-                  <span class="text-indigo-400">{lookupResult.ipa}</span>
-                {/if}
-              </div>
-            </div>
-            <button
-              type="button"
-              onclick={() => playWordAudio(lookupResult!.word)}
-              class="rounded-xl border border-zinc-700 p-2 text-zinc-300 hover:border-indigo-500"
-            >
-              <Volume2 class="h-4 w-4" />
-            </button>
-          </div>
-
-          {#if lookupResult.senses.length > 0}
-            <div class="max-h-56 space-y-2 overflow-y-auto pr-1">
-              {#each lookupResult.senses as sense}
-                <div class="space-y-0.5 border-l-2 border-zinc-800 pl-2.5 text-xs">
-                  <div class="flex flex-wrap items-center gap-1">
-                    <span class="rounded bg-indigo-500/15 px-1 py-0.5 text-[10px] text-indigo-300">
-                      {sense.pos}
-                    </span>
-                    {#each sense.tags as tag}
-                      <span class="rounded bg-zinc-800 px-1 py-0.5 text-[10px] text-zinc-400">
-                        {tag}
-                      </span>
-                    {/each}
-                  </div>
-                  {#if sense.definitionVi}
-                    <p class="text-emerald-400">{sense.definitionVi}</p>
-                  {/if}
-                  {#if sense.definitionEn}
-                    <p class="text-zinc-300">{sense.definitionEn}</p>
-                  {/if}
-                  {#if sense.synonyms.length > 0}
-                    <p class="text-[11px] text-zinc-400">
-                      Đồng nghĩa: {sense.synonyms.join(", ")}
-                    </p>
-                  {/if}
-                </div>
-              {/each}
-            </div>
-          {:else}
-            <p class="text-sm text-emerald-400">
-              {lookupResult.meaningVi ?? lookupResult.meaningEn ?? "Chưa có nghĩa"}
-            </p>
-          {/if}
-
-          <div>
-            <label class="mb-1 block text-[11px] text-zinc-400" for="reader-meaning">
-              Nghĩa / Bản dịch (có thể sửa trước khi lưu)
-            </label>
-            <textarea
-              id="reader-meaning"
-              rows="2"
-              bind:value={customMeaning}
-              placeholder="Nhập hoặc chỉnh sửa nghĩa..."
-              class="w-full rounded-xl border border-zinc-700 bg-zinc-950 p-2.5 text-xs text-zinc-200 placeholder-zinc-500 focus:border-indigo-500 focus:outline-none"
-            ></textarea>
-          </div>
-
-          <div>
-            <label class="mb-1 block text-[11px] text-zinc-400" for="reader-context">
-              Câu ngữ cảnh (tuỳ chọn)
-            </label>
-            <textarea
-              id="reader-context"
-              rows="2"
-              bind:value={contextSentence}
-              placeholder="Nhập hoặc sửa câu ví dụ..."
-              class="w-full rounded-xl border border-zinc-700 bg-zinc-950 p-2.5 text-xs text-zinc-200 placeholder-zinc-500 focus:border-indigo-500 focus:outline-none"
-            ></textarea>
-          </div>
-
-          <button
-            type="button"
-            onclick={handleSaveWithContext}
-            disabled={!selectedDeckId}
-            class="flex w-full items-center justify-center gap-1.5 rounded-xl bg-indigo-600 py-2.5 text-xs font-semibold text-white hover:bg-indigo-500 disabled:opacity-40"
-          >
-            <Plus class="h-3.5 w-3.5" />
-            Lưu vào bộ thẻ
-          </button>
-        </div>
-      {:else if manualQuery.trim()}
-        <div class="space-y-3 border-t border-zinc-800 pt-3">
-          <p class="text-sm font-semibold text-white">{manualQuery.trim()}</p>
-          <div>
-            <label class="mb-1 block text-[11px] text-zinc-400" for="reader-meaning-fallback">
-              Nghĩa / Bản dịch
-            </label>
-            <textarea
-              id="reader-meaning-fallback"
-              rows="2"
-              bind:value={customMeaning}
-              placeholder="Nhập nghĩa hoặc bản dịch cho cụm từ / câu này..."
-              class="w-full rounded-xl border border-zinc-700 bg-zinc-950 p-2.5 text-xs text-zinc-200 placeholder-zinc-500 focus:border-indigo-500 focus:outline-none"
-            ></textarea>
-          </div>
-          <button
-            type="button"
-            onclick={handleSaveWithContext}
-            disabled={!selectedDeckId}
-            class="flex w-full items-center justify-center gap-1.5 rounded-xl bg-indigo-600 py-2.5 text-xs font-semibold text-white hover:bg-indigo-500 disabled:opacity-40"
-          >
-            <Plus class="h-3.5 w-3.5" />
-            Lưu vào bộ thẻ
-          </button>
-        </div>
-      {:else}
-        <p class="py-6 text-center text-xs text-zinc-500">
-          Click 1 từ hoặc bôi đen cả cụm từ / nguyên câu để tra nghĩa và lưu thành flashcard.
-        </p>
-      {/if}
-
-      {#if statusMsg}
-        <p class="rounded-xl bg-emerald-500/10 p-2.5 text-xs text-emerald-400">{statusMsg}</p>
-      {/if}
-      {#if error}
-        <p class="rounded-xl bg-rose-500/10 p-2.5 text-xs text-rose-400">{error}</p>
-      {/if}
-    </div>
+    <ReaderLookupSidebar
+      {decks}
+      bind:selectedDeckId
+      bind:creatingDeck
+      bind:newDeckName
+      bind:manualQuery
+      {lookingUp}
+      {lookupResult}
+      bind:customMeaning
+      bind:contextSentence
+      {statusMsg}
+      {error}
+      onQuickCreateDeck={handleQuickCreateDeck}
+      onManualSearch={handleManualSearch}
+      onSaveWithContext={handleSaveWithContext}
+    />
   </div>
 {/if}

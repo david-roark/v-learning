@@ -48,7 +48,7 @@
 </script>
 
 <div class="grid grid-cols-4 gap-3">
-  {#each options as opt}
+  {#each options as opt (opt.rating)}
     <button
       type="button"
       disabled={submitting}

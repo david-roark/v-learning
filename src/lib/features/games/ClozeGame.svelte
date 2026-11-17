@@ -136,7 +136,7 @@
       {#if mistakes.length > 0}
         <div class="mx-auto max-w-md space-y-1.5 text-left">
           <p class="text-xs font-semibold text-zinc-300">Từ cần ôn lại:</p>
-          {#each mistakes as m}
+          {#each mistakes as m (m.id)}
             <div
               class="flex items-center justify-between rounded-xl border border-zinc-800 bg-zinc-900/70 px-3 py-2 text-xs"
             >

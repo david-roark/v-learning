@@ -1,0 +1,96 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  frontend:
+    name: Frontend & Dict-Builder
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          cache: "npm"
+
+      - name: Install npm dependencies
+        run: npm ci
+
+      - name: Check Prettier formatting
+        run: npx prettier --check .
+
+      - name: Type-check Svelte & TypeScript
+        run: npm run check
+
+      - name: Lint frontend
+        run: npm run lint:fe
+
+      - name: Run frontend unit tests
+        run: npm run test:fe
+
+      - name: Run Python dict-builder tests
+        run: npm run test:py
+
+      - name: Smoke-test offline dict-builder CLI
+        run: python3 scripts/dict-builder/build_dict.py --sample --no-compress --output-dir /tmp/dict-sample
+
+      - name: Build frontend bundle
+        run: npm run build
+
+  rust:
+    name: Rust & Tauri Backend
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Install Linux Tauri dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libwebkit2gtk-4.1-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            libxdo-dev \
+            patchelf \
+            libssl-dev \
+            libasound2-dev \
+            pkg-config
+
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Cache Cargo dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Ensure frontendDist directory exists for tauri::generate_context!
+        run: mkdir -p build && touch build/index.html
+
+      - name: Check Rust formatting
+        run: cargo fmt --manifest-path src-tauri/Cargo.toml -- --check
+
+      - name: Lint Rust (clippy)
+        run: npm run lint:rs
+
+      - name: Run Rust unit tests
+        run: npm run test:rs

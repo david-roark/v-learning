@@ -24,7 +24,6 @@ export default ts.config(
     },
     rules: {
       "no-undef": "off",
-      "svelte/require-each-key": "off",
     },
   },
   {

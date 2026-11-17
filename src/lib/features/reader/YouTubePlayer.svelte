@@ -146,7 +146,7 @@
         </p>
       {:else}
         <div class="space-y-1.5">
-          {#each transcript as line, idx}
+          {#each transcript as line, idx (idx)}
             {@const tokens = tokenizeWithSentences(line.text)}
             {@const isActive = idx === activeIndex}
             <div
@@ -170,7 +170,7 @@
                   ? 'font-medium text-white'
                   : 'text-zinc-300'}"
               >
-                {#each tokens as tok}
+                {#each tokens as tok, tIdx (tIdx)}
                   {#if tok.isWord}
                     <button
                       type="button"

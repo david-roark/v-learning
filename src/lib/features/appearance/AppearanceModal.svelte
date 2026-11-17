@@ -95,7 +95,7 @@
               class="flex-1 accent-indigo-500"
             />
             <div class="flex gap-1">
-              {#each [14, 16, 18, 20] as sz}
+              {#each [14, 16, 18, 20] as sz (sz)}
                 <button
                   type="button"
                   onclick={() => (appearance.fontSize = sz)}

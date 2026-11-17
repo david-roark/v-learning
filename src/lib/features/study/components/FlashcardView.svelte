@@ -78,7 +78,7 @@
 
       {#if note.collocations.length > 0}
         <div class="mt-4 flex flex-wrap justify-center gap-1.5">
-          {#each note.collocations as coll}
+          {#each note.collocations as coll, idx (idx)}
             <span class="rounded-lg bg-zinc-800 px-2.5 py-1 text-xs text-zinc-300">
               {coll}
             </span>

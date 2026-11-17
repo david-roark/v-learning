@@ -52,7 +52,7 @@
       <div class="mb-4">
         <p class="text-xs text-zinc-400">Hãy viết 1–2 câu tiếng Anh sử dụng các từ vừa ôn:</p>
         <div class="mt-2 flex flex-wrap gap-1.5">
-          {#each targetWords as w}
+          {#each targetWords as w (w)}
             <span
               class="rounded-lg bg-indigo-500/15 px-2.5 py-1 text-xs font-medium text-indigo-300"
             >

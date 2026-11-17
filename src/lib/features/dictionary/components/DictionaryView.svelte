@@ -344,7 +344,7 @@
               </span>
             {/if}
             {#if entry.sources.length > 0}
-              {#each entry.sources as src}
+              {#each entry.sources as src, sIdx (sIdx)}
                 <span class="rounded bg-zinc-800/80 px-1.5 py-0.5 text-[10px] text-zinc-400">
                   {src}
                 </span>
@@ -358,7 +358,7 @@
 
           {#if entry.senses.length > 0}
             <div class="space-y-2 pt-0.5">
-              {#each entry.senses as sense}
+              {#each entry.senses as sense, senseIdx (senseIdx)}
                 <div class="space-y-1 border-l-2 border-zinc-800 pl-3">
                   <div class="flex flex-wrap items-center gap-1.5">
                     <span
@@ -366,7 +366,7 @@
                     >
                       {sense.pos}
                     </span>
-                    {#each sense.tags as tag}
+                    {#each sense.tags as tag, tagIdx (tagIdx)}
                       <span class="rounded bg-zinc-800 px-1.5 py-0.5 text-[10px] text-zinc-400">
                         {tag}
                       </span>
@@ -378,14 +378,14 @@
                   {#if sense.definitionEn}
                     <p class="text-xs text-zinc-300">{sense.definitionEn}</p>
                   {/if}
-                  {#each sense.examples as ex}
+                  {#each sense.examples as ex, exIdx (exIdx)}
                     <p class="text-xs text-zinc-400 italic">"{ex}"</p>
                   {/each}
                   {#if sense.synonyms.length > 0 || sense.antonyms.length > 0}
                     <div class="flex flex-wrap items-center gap-1.5 pt-0.5 text-[11px]">
                       {#if sense.synonyms.length > 0}
                         <span class="text-zinc-500">Đồng nghĩa:</span>
-                        {#each sense.synonyms as syn}
+                        {#each sense.synonyms as syn, synIdx (synIdx)}
                           <button
                             type="button"
                             onclick={() => handleQuickSearch(syn)}
@@ -397,7 +397,7 @@
                       {/if}
                       {#if sense.antonyms.length > 0}
                         <span class="ml-1 text-zinc-500">Trái nghĩa:</span>
-                        {#each sense.antonyms as ant}
+                        {#each sense.antonyms as ant, antIdx (antIdx)}
                           <button
                             type="button"
                             onclick={() => handleQuickSearch(ant)}

@@ -81,7 +81,7 @@
       </div>
 
       <div class="flex flex-wrap gap-2 rounded-2xl bg-zinc-950 p-4 text-sm">
-        {#each result.tokens as tok}
+        {#each result.tokens as tok, idx (idx)}
           {#if tok.status === "correct"}
             <span class="rounded-lg bg-emerald-500/15 px-2 py-1 text-emerald-300">{tok.text}</span>
           {:else if tok.status === "wrong"}

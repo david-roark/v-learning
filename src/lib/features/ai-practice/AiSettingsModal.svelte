@@ -142,7 +142,7 @@
       </div>
 
       <div class="mb-4 grid grid-cols-4 gap-1.5 rounded-xl bg-zinc-950 p-1">
-        {#each ["gemini", "openai", "ollama", "custom"] as const as pid}
+        {#each ["gemini", "openai", "ollama", "custom"] as const as pid (pid)}
           <button
             type="button"
             onclick={() => selectProvider(pid)}

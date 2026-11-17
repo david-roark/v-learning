@@ -107,7 +107,7 @@
       </div>
 
       <div class="grid grid-cols-7 items-end gap-2.5 pt-4 sm:grid-cols-14">
-        {#each summary.forecast7d as f, idx}
+        {#each summary.forecast7d as f, idx (f.date)}
           {@const heightPct = Math.max(6, Math.round((f.dueCount / maxForecast) * 100))}
           <div class="flex flex-col items-center gap-2">
             <span class="text-xs font-medium text-zinc-300">{f.dueCount}</span>

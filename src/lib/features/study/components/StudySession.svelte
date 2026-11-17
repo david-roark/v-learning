@@ -183,7 +183,7 @@
       {/if}
 
       <div class="flex rounded-xl border border-zinc-800 bg-zinc-900 p-0.5 text-[11px]">
-        {#each [0.8, 1.0, 1.2] as const as spd}
+        {#each [0.8, 1.0, 1.2] as const as spd (spd)}
           <button
             type="button"
             onclick={() => (audioSpeed = spd)}
