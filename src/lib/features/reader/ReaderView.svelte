@@ -65,6 +65,7 @@
   let pdfTextLayer = $state<HTMLDivElement | null>(null);
   let pdfContainer = $state<HTMLDivElement | null>(null);
   let textContainer = $state<HTMLDivElement | null>(null);
+  let youtubeContainer = $state<HTMLDivElement | null>(null);
   let readerRoot = $state<HTMLDivElement | null>(null);
   let editing = $state(false);
   let parsingFile = $state(false);
@@ -78,6 +79,7 @@
   let creatingDeck = $state(false);
   let newDeckName = $state("");
   let manualQuery = $state("");
+  let customMeaning = $state("");
   let contextSentence = $state("");
   let selectedToken = $state<TextToken | null>(null);
   let lookupResult = $state<DictionaryEntry | null>(null);
@@ -123,14 +125,28 @@
     }
   });
 
-  function handlePdfTextSelect(e: MouseEvent) {
-    if (!pdfSession || editing || !pdfTextLayer?.contains(e.target as Node)) return;
-    const sel = window.getSelection()?.toString().trim();
-    if (!sel || sel.length > 60) return;
-    const firstWord = sel.match(/[A-Za-z][A-Za-z'-]*/)?.[0];
-    if (!firstWord) return;
-    manualQuery = firstWord;
-    void lookupAndSelect(firstWord);
+  function handleReaderTextSelect(e: MouseEvent) {
+    if (editing) return;
+    const target = e.target as Node | null;
+    if (!target) return;
+    const inPdf = Boolean(pdfSession && pdfTextLayer?.contains(target));
+    const inText = Boolean(!pdfSession && !youtubeId && textContainer?.contains(target));
+    const inYt = Boolean(youtubeId && youtubeContainer?.contains(target));
+    if (!inPdf && !inText && !inYt) return;
+
+    const rawSel = window.getSelection()?.toString() ?? "";
+    const cleaned = rawSel
+      .replace(/-\s*\n\s*/g, "")
+      .replace(/\s+/g, " ")
+      .trim();
+    if (!cleaned || cleaned.length > 500) return;
+
+    // In text/YouTube mode, single clicks are handled by word buttons; only intercept multi-word drag selections
+    if (!inPdf && !cleaned.includes(" ")) return;
+
+    selectedToken = null;
+    manualQuery = cleaned;
+    void lookupAndSelect(cleaned, cleaned.includes(" ") ? cleaned : undefined);
   }
 
   function adjustZoom(delta: number) {
@@ -186,12 +202,15 @@
     error = "";
     statusMsg = "";
     lookupResult = null;
+    customMeaning = "";
     try {
       const res = await dictionaryApi.lookup(clean);
       lookupResult = res;
+      customMeaning = res.meaningVi ?? res.meaningEn ?? "";
       contextSentence = sentence ?? res.exampleSentence ?? "";
     } catch (err) {
       error = String(err);
+      if (sentence) contextSentence = sentence;
     } finally {
       lookingUp = false;
     }
@@ -211,18 +230,21 @@
   }
 
   async function handleSaveWithContext() {
-    if (!lookupResult || !selectedDeckId) return;
+    const targetWord = (lookupResult?.word ?? manualQuery).trim();
+    if (!targetWord || !selectedDeckId) return;
+    const meaning =
+      customMeaning.trim() || lookupResult?.meaningVi || lookupResult?.meaningEn || targetWord;
     error = "";
     try {
       await notesApi.create({
         deckId: selectedDeckId,
         noteType: "vocab",
-        word: lookupResult.word,
-        ipa: lookupResult.ipa ?? undefined,
-        meaning: lookupResult.meaningVi ?? lookupResult.meaningEn ?? lookupResult.word,
+        word: targetWord,
+        ipa: lookupResult?.ipa ?? undefined,
+        meaning,
         exampleSentence: contextSentence.trim() || undefined,
       });
-      statusMsg = `Đã lưu "${lookupResult.word}" vào bộ thẻ!`;
+      statusMsg = `Đã lưu "${targetWord}" vào bộ thẻ!`;
       onCardAdded();
     } catch (err) {
       error = String(err);
@@ -317,7 +339,7 @@
   });
 </script>
 
-<svelte:window onmouseup={handlePdfTextSelect} onkeydown={handleReaderKeydown} />
+<svelte:window onmouseup={handleReaderTextSelect} onkeydown={handleReaderKeydown} />
 
 <div bind:this={readerRoot} class="grid gap-4 lg:grid-cols-12">
   <div class="flex flex-col space-y-3 lg:col-span-8 xl:col-span-9">
@@ -499,12 +521,14 @@
         class="h-[calc(100vh-13.5rem)] w-full rounded-2xl border border-zinc-700 bg-zinc-900 p-4 text-sm leading-relaxed text-zinc-100 focus:border-indigo-500 focus:outline-none"
       ></textarea>
     {:else if youtubeId}
-      <YouTubePlayer
-        videoId={youtubeId}
-        transcript={youtubeTranscript}
-        selectedWord={selectedToken?.text ?? ""}
-        onWordClick={handleWordClick}
-      />
+      <div bind:this={youtubeContainer}>
+        <YouTubePlayer
+          videoId={youtubeId}
+          transcript={youtubeTranscript}
+          selectedWord={selectedToken?.text ?? ""}
+          onWordClick={handleWordClick}
+        />
+      </div>
     {:else if pdfSession}
       <div
         bind:this={pdfContainer}
@@ -522,7 +546,7 @@
             <button
               type="button"
               onclick={() => handleWordClick(tok)}
-              class="rounded px-0.5 transition hover:bg-indigo-500/25 hover:text-indigo-200 {selectedToken?.text ===
+              class="select-text rounded px-0.5 transition hover:bg-indigo-500/25 hover:text-indigo-200 {selectedToken?.text ===
               tok.text
                 ? 'bg-indigo-600/30 text-indigo-200'
                 : ''}"
@@ -631,7 +655,7 @@
         <input
           type="text"
           bind:value={manualQuery}
-          placeholder="Nhập từ cần tra..."
+          placeholder="Nhập từ, cụm từ hoặc câu..."
           class="w-full rounded-xl border border-zinc-700 bg-zinc-950 py-2 pr-2.5 pl-8 text-xs text-white placeholder-zinc-500 focus:border-indigo-500 focus:outline-none"
         />
       </div>
@@ -713,6 +737,19 @@
         {/if}
 
         <div>
+          <label class="mb-1 block text-[11px] text-zinc-400" for="reader-meaning">
+            Nghĩa / Bản dịch (có thể sửa trước khi lưu)
+          </label>
+          <textarea
+            id="reader-meaning"
+            rows="2"
+            bind:value={customMeaning}
+            placeholder="Nhập hoặc chỉnh sửa nghĩa..."
+            class="w-full rounded-xl border border-zinc-700 bg-zinc-950 p-2.5 text-xs text-zinc-200 placeholder-zinc-500 focus:border-indigo-500 focus:outline-none"
+          ></textarea>
+        </div>
+
+        <div>
           <label class="mb-1 block text-[11px] text-zinc-400" for="reader-context">
             Câu ngữ cảnh (tuỳ chọn)
           </label>
@@ -735,9 +772,34 @@
           Lưu vào bộ thẻ
         </button>
       </div>
+    {:else if manualQuery.trim()}
+      <div class="space-y-3 border-t border-zinc-800 pt-3">
+        <p class="text-sm font-semibold text-white">{manualQuery.trim()}</p>
+        <div>
+          <label class="mb-1 block text-[11px] text-zinc-400" for="reader-meaning-fallback">
+            Nghĩa / Bản dịch
+          </label>
+          <textarea
+            id="reader-meaning-fallback"
+            rows="2"
+            bind:value={customMeaning}
+            placeholder="Nhập nghĩa hoặc bản dịch cho cụm từ / câu này..."
+            class="w-full rounded-xl border border-zinc-700 bg-zinc-950 p-2.5 text-xs text-zinc-200 placeholder-zinc-500 focus:border-indigo-500 focus:outline-none"
+          ></textarea>
+        </div>
+        <button
+          type="button"
+          onclick={handleSaveWithContext}
+          disabled={!selectedDeckId}
+          class="flex w-full items-center justify-center gap-1.5 rounded-xl bg-indigo-600 py-2.5 text-xs font-semibold text-white hover:bg-indigo-500 disabled:opacity-40"
+        >
+          <Plus class="h-3.5 w-3.5" />
+          Lưu vào bộ thẻ
+        </button>
+      </div>
     {:else}
       <p class="py-6 text-center text-xs text-zinc-500">
-        Click từ trong văn bản hoặc nhập từ vào ô trên để tra và lưu thành flashcard.
+        Click 1 từ hoặc bôi đen cả cụm từ / nguyên câu để tra nghĩa và lưu thành flashcard.
       </p>
     {/if}
 

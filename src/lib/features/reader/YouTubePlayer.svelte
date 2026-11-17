@@ -72,7 +72,7 @@
                   <button
                     type="button"
                     onclick={() => onWordClick(tok)}
-                    class="rounded px-0.5 transition hover:bg-indigo-500/25 hover:text-indigo-200 {selectedWord ===
+                    class="select-text rounded px-0.5 transition hover:bg-indigo-500/25 hover:text-indigo-200 {selectedWord ===
                     tok.text
                       ? 'bg-indigo-600/30 text-indigo-200'
                       : ''}"
