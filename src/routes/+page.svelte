@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Flame, Layers, Plus, Upload } from "@lucide/svelte";
+  import { Flame, Layers, Plus, Sparkles, Upload } from "@lucide/svelte";
   import { onMount } from "svelte";
   import AiSettingsModal from "$lib/features/ai-practice/AiSettingsModal.svelte";
   import AnalyticsView from "$lib/features/analytics/AnalyticsView.svelte";
@@ -127,41 +127,60 @@
           {:else if activeTab === "analytics"}
             <AnalyticsView />
           {:else if activeTab === "decks"}
-            <div class="mb-4 flex items-center justify-end gap-2">
-              <label
-                class="inline-flex cursor-pointer items-center gap-1.5 rounded-xl border border-zinc-700 px-3 py-1.5 text-xs font-medium text-zinc-300 hover:bg-zinc-800"
-              >
-                <Upload class="h-3.5 w-3.5" />
-                Import .apkg
-                <input type="file" accept=".apkg" onchange={handleImportApkg} class="hidden" />
-              </label>
-              <button
-                type="button"
-                onclick={() => (showDeckModal = true)}
-                class="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-3.5 py-1.5 text-xs font-semibold text-white transition hover:bg-indigo-500"
-              >
-                <Plus class="h-3.5 w-3.5" />
-                Bộ thẻ mới
-              </button>
-            </div>
-            <div class="mb-5 grid grid-cols-1 gap-3 sm:mb-6 sm:grid-cols-3 sm:gap-4">
-              <div class="rounded-2xl border border-zinc-800/80 bg-zinc-900/60 p-4">
-                <div class="flex items-center gap-2 text-xs font-medium text-zinc-400">
-                  <Flame class="h-4 w-4 text-amber-400" />
-                  Đã ôn hôm nay
+            <!-- Compact Daily Summary + Actions -->
+            <div class="mb-5 flex flex-col gap-3 sm:flex-row sm:items-stretch sm:justify-between">
+              <div class="grid flex-1 grid-cols-3 gap-2 sm:gap-3">
+                <div
+                  class="rounded-2xl border border-zinc-800/80 bg-zinc-900/60 px-3 py-2.5 sm:px-4 sm:py-3"
+                >
+                  <div class="flex items-center gap-1.5 text-[11px] font-medium text-zinc-400">
+                    <Flame class="h-3.5 w-3.5 shrink-0 text-amber-400" />
+                    <span class="truncate">Đã ôn hôm nay</span>
+                  </div>
+                  <p class="mt-1 text-xl font-bold text-white sm:text-2xl">
+                    {stats.reviewedToday}
+                  </p>
                 </div>
-                <p class="mt-1.5 text-2xl font-bold text-white">{stats.reviewedToday}</p>
-              </div>
-              <div class="rounded-2xl border border-zinc-800/80 bg-zinc-900/60 p-4">
-                <div class="text-xs font-medium text-zinc-400">Từ mới hôm nay</div>
-                <p class="mt-1.5 text-2xl font-bold text-sky-400">{stats.newLearnedToday}</p>
-              </div>
-              <div class="rounded-2xl border border-zinc-800/80 bg-zinc-900/60 p-4">
-                <div class="flex items-center gap-2 text-xs font-medium text-zinc-400">
-                  <Layers class="h-4 w-4 text-indigo-400" />
-                  Tổng thẻ cần ôn
+                <div
+                  class="rounded-2xl border border-zinc-800/80 bg-zinc-900/60 px-3 py-2.5 sm:px-4 sm:py-3"
+                >
+                  <div class="flex items-center gap-1.5 text-[11px] font-medium text-zinc-400">
+                    <Sparkles class="h-3.5 w-3.5 shrink-0 text-sky-400" />
+                    <span class="truncate">Từ mới hôm nay</span>
+                  </div>
+                  <p class="mt-1 text-xl font-bold text-sky-400 sm:text-2xl">
+                    {stats.newLearnedToday}
+                  </p>
                 </div>
-                <p class="mt-1.5 text-2xl font-bold text-indigo-400">{stats.dueRemaining}</p>
+                <div
+                  class="rounded-2xl border border-zinc-800/80 bg-zinc-900/60 px-3 py-2.5 sm:px-4 sm:py-3"
+                >
+                  <div class="flex items-center gap-1.5 text-[11px] font-medium text-zinc-400">
+                    <Layers class="h-3.5 w-3.5 shrink-0 text-indigo-400" />
+                    <span class="truncate">Cần ôn còn lại</span>
+                  </div>
+                  <p class="mt-1 text-xl font-bold text-indigo-400 sm:text-2xl">
+                    {stats.dueRemaining}
+                  </p>
+                </div>
+              </div>
+
+              <div class="flex shrink-0 items-center justify-end gap-2 sm:flex-col sm:justify-center">
+                <button
+                  type="button"
+                  onclick={() => (showDeckModal = true)}
+                  class="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-indigo-600 px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-indigo-500 sm:w-full sm:flex-none"
+                >
+                  <Plus class="h-3.5 w-3.5" />
+                  Bộ thẻ mới
+                </button>
+                <label
+                  class="inline-flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-xl border border-zinc-700/90 bg-zinc-900/60 px-3.5 py-2 text-xs font-medium text-zinc-300 transition hover:bg-zinc-800 sm:w-full sm:flex-none"
+                >
+                  <Upload class="h-3.5 w-3.5" />
+                  Import .apkg
+                  <input type="file" accept=".apkg" onchange={handleImportApkg} class="hidden" />
+                </label>
               </div>
             </div>
 
