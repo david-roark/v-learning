@@ -1,8 +1,13 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { buildMatchRound, buildQuizQuestion } from "./gameEngine.ts";
+import {
+  buildClozeQuestion,
+  buildMatchRound,
+  buildQuizQuestion,
+  scrambleLetters,
+} from "./gameEngine.ts";
 
-function makeNote(id, word, meaning, ipa = null) {
+function makeNote(id, word, meaning, ipa = null, exampleSentence = null) {
   return {
     id,
     deckId: "d1",
@@ -10,7 +15,7 @@ function makeNote(id, word, meaning, ipa = null) {
     word,
     ipa,
     meaning,
-    exampleSentence: null,
+    exampleSentence,
     audioPath: null,
     createdAt: "2026-01-01",
   };
@@ -44,4 +49,25 @@ test("buildQuizQuestion builds 4 unique options including exact target", () => {
   assert.equal(q.options.length, 4);
   assert.equal(q.options.filter((o) => o.isCorrect).length, 1);
   assert.equal(new Set(q.options.map((o) => o.label)).size, 4);
+});
+
+test("buildClozeQuestion masks target word in example sentence", () => {
+  const notes = [
+    makeNote("1", "resilient", "kiên cường", null, "Children are remarkably resilient."),
+    makeNote("2", "pragmatic", "thực tế"),
+    makeNote("3", "eloquent", "hùng hồn"),
+    makeNote("4", "ephemeral", "ngắn ngủi"),
+  ];
+  const cloze = buildClozeQuestion(notes[0], notes);
+  assert.ok(cloze);
+  assert.equal(cloze.maskedSentence, "Children are remarkably _____.");
+  assert.equal(cloze.options.length, 4);
+  assert.equal(cloze.options.find((o) => o.isCorrect)?.label, "resilient");
+});
+
+test("scrambleLetters returns scrambled permutation of same characters", () => {
+  const letters = scrambleLetters("pragmatic");
+  assert.equal(letters.length, "pragmatic".length);
+  assert.notEqual(letters.join(""), "pragmatic");
+  assert.deepEqual([...letters].sort(), [..."pragmatic"].sort());
 });

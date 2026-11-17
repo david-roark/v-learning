@@ -26,9 +26,9 @@
   let timer: ReturnType<typeof setInterval> | null = null;
   let startedAt = 0;
 
-  function startRound() {
+  function startRound(customNotes?: Note[]) {
     if (timer) clearInterval(timer);
-    round = buildMatchRound(notes, 6);
+    round = buildMatchRound(customNotes && customNotes.length >= 2 ? customNotes : notes, 6);
     matchedIds.clear();
     selectedLeftId = null;
     selectedRightId = null;
@@ -87,7 +87,7 @@
     checkMatch();
   }
 
-  onMount(startRound);
+  onMount(() => startRound());
   onDestroy(() => {
     if (timer) clearInterval(timer);
   });
@@ -110,7 +110,7 @@
     </div>
     <button
       type="button"
-      onclick={startRound}
+      onclick={() => startRound()}
       class="inline-flex items-center gap-1.5 rounded-xl border border-zinc-700 px-3 py-1.5 text-xs text-zinc-200 hover:bg-zinc-800"
     >
       <RotateCcw class="h-3.5 w-3.5" />
@@ -160,13 +160,24 @@
         </div>
       {/if}
 
-      <button
-        type="button"
-        onclick={startRound}
-        class="rounded-xl bg-indigo-600 px-5 py-2.5 text-xs font-semibold text-white hover:bg-indigo-500"
-      >
-        Chơi ván tiếp theo
-      </button>
+      <div class="flex flex-wrap justify-center gap-2">
+        {#if mistakes.length >= 2}
+          <button
+            type="button"
+            onclick={() => startRound(mistakes)}
+            class="rounded-xl border border-amber-500/50 bg-amber-500/15 px-4 py-2.5 text-xs font-semibold text-amber-200 hover:bg-amber-500/25"
+          >
+            Ôn ngay {mistakes.length} từ vừa sai
+          </button>
+        {/if}
+        <button
+          type="button"
+          onclick={() => startRound()}
+          class="rounded-xl bg-indigo-600 px-5 py-2.5 text-xs font-semibold text-white hover:bg-indigo-500"
+        >
+          Chơi ván tiếp theo
+        </button>
+      </div>
     </div>
   {:else}
     <div class="grid gap-4 md:grid-cols-2">

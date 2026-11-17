@@ -24,7 +24,13 @@ export interface QuizQuestion {
   options: QuizOption[];
 }
 
-export type GameModeId = "match" | "quiz" | "audio";
+export type GameModeId = "match" | "quiz" | "audio" | "cloze" | "scramble";
+
+export interface ClozeQuestion {
+  note: Note;
+  maskedSentence: string;
+  options: QuizOption[];
+}
 
 const SCORES_KEY = "vlearning_game_scores";
 
@@ -86,6 +92,40 @@ export function buildQuizQuestion(
     subPrompt: direction === "en-to-vi" ? (target.ipa ?? undefined) : undefined,
     options,
   };
+}
+
+function escapeRegExp(str: string): string {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+export function buildClozeQuestion(target: Note, pool: Note[]): ClozeQuestion | null {
+  const sentence = target.exampleSentence?.trim() ?? "";
+  const word = target.word.trim();
+  if (!sentence || !word) return null;
+
+  const pattern = new RegExp(`\\b${escapeRegExp(word)}\\b`, "gi");
+  if (!pattern.test(sentence)) return null;
+  const maskedSentence = sentence.replace(pattern, "_____");
+  const quiz = buildQuizQuestion(target, pool, "vi-to-en");
+  return {
+    note: target,
+    maskedSentence,
+    options: quiz.options,
+  };
+}
+
+export function scrambleLetters(word: string): string[] {
+  const chars = word.trim().split("");
+  if (chars.length <= 1 || new Set(chars.map((c) => c.toLowerCase())).size <= 1) {
+    return chars;
+  }
+  for (let attempt = 0; attempt < 8; attempt++) {
+    const shuffled = shuffleArray(chars);
+    if (shuffled.join("") !== chars.join("")) {
+      return shuffled;
+    }
+  }
+  return [...chars.slice(1), chars[0]];
 }
 
 export function loadBestScores(): Record<string, number> {

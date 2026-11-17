@@ -1,11 +1,21 @@
 <script lang="ts">
-  import { ArrowLeft, Gamepad2, Headphones, Puzzle, Zap } from "@lucide/svelte";
+  import {
+    ArrowLeft,
+    BookOpenCheck,
+    Gamepad2,
+    Headphones,
+    Puzzle,
+    Sparkles,
+    Zap,
+  } from "@lucide/svelte";
   import { notesApi } from "$lib/features/card-editor/api";
   import Select from "$lib/shared/components/Select.svelte";
   import type { DeckWithStats, Note } from "$lib/shared/types";
-  import { loadBestScores, type GameModeId } from "./gameEngine";
+  import ClozeGame from "./ClozeGame.svelte";
+  import { buildClozeQuestion, loadBestScores, type GameModeId } from "./gameEngine";
   import MatchPairsGame from "./MatchPairsGame.svelte";
   import SpeedQuizGame from "./SpeedQuizGame.svelte";
+  import WordScrambleGame from "./WordScrambleGame.svelte";
 
   interface Props {
     decks: DeckWithStats[];
@@ -21,10 +31,20 @@
 
   const deckOptions = $derived([
     { value: "__ALL__", label: "Tất cả bộ thẻ" },
+    { value: "__RECENT__", label: "20 từ mới thêm gần đây" },
     ...decks.map((d) => ({ value: d.id, label: `${d.name} (${d.totalCards} thẻ)` })),
   ]);
 
   const validNotes = $derived(notes.filter((n) => n.word.trim() && n.meaning.trim()));
+  const clozeEligible = $derived(
+    validNotes.filter((n) => buildClozeQuestion(n, validNotes) !== null),
+  );
+  const scrambleEligible = $derived(
+    validNotes.filter((n) => {
+      const w = n.word.trim();
+      return w.length >= 3 && w.length <= 18 && !w.includes(" ");
+    }),
+  );
 
   async function loadNotes() {
     if (decks.length === 0) {
@@ -33,9 +53,15 @@
     }
     loadingNotes = true;
     try {
-      if (selectedDeckId === "__ALL__") {
+      if (selectedDeckId === "__ALL__" || selectedDeckId === "__RECENT__") {
         const lists = await Promise.all(decks.map((d) => notesApi.listByDeck(d.id)));
-        notes = lists.flat();
+        const all = lists.flat();
+        if (selectedDeckId === "__RECENT__") {
+          all.sort((a, b) => b.createdAt - a.createdAt);
+          notes = all.slice(0, 20);
+        } else {
+          notes = all;
+        }
       } else {
         notes = await notesApi.listByDeck(selectedDeckId);
       }
@@ -55,7 +81,7 @@
   }
 </script>
 
-<div class="mx-auto max-w-4xl space-y-5">
+<div class="mx-auto max-w-5xl space-y-5">
   {#if activeMode}
     <div class="flex items-center justify-between">
       <button
@@ -73,6 +99,10 @@
 
     {#if activeMode === "match"}
       <MatchPairsGame notes={validNotes} onScoreUpdated={refreshScores} />
+    {:else if activeMode === "cloze"}
+      <ClozeGame notes={validNotes} onScoreUpdated={refreshScores} />
+    {:else if activeMode === "scramble"}
+      <WordScrambleGame notes={scrambleEligible} onScoreUpdated={refreshScores} />
     {:else}
       <SpeedQuizGame notes={validNotes} mode={activeMode} onScoreUpdated={refreshScores} />
     {/if}
@@ -93,7 +123,7 @@
       </div>
 
       <div class="flex items-center gap-2">
-        <Select options={deckOptions} bind:value={selectedDeckId} class="w-56" />
+        <Select options={deckOptions} bind:value={selectedDeckId} class="w-60" />
       </div>
     </div>
 
@@ -107,7 +137,7 @@
         từ).
       </div>
     {:else}
-      <div class="grid gap-4 sm:grid-cols-3">
+      <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <button
           type="button"
           onclick={() => (activeMode = "match")}
@@ -141,7 +171,7 @@
             </div>
             <h3 class="text-sm font-semibold text-white">Trắc nghiệm 45s</h3>
             <p class="mt-1 text-xs text-zinc-400">
-              Chọn nhanh nghĩa đúng trong 45 giây, tích combo x4 điểm!
+              Chọn nhanh nghĩa đúng (Anh ↔ Việt) trong 45 giây, combo x4 điểm!
             </p>
           </div>
           <p class="mt-4 text-[11px] text-zinc-400">
@@ -170,6 +200,52 @@
             Kỷ lục:
             <strong class="text-amber-300">
               {bestScores.audio !== undefined ? `${bestScores.audio} điểm` : "—"}
+            </strong>
+          </p>
+        </button>
+
+        <button
+          type="button"
+          disabled={clozeEligible.length === 0}
+          onclick={() => (activeMode = "cloze")}
+          class="flex flex-col justify-between rounded-2xl border border-zinc-800 bg-zinc-900/70 p-5 text-left transition hover:border-indigo-500/60 hover:bg-zinc-900 disabled:cursor-not-allowed disabled:opacity-45"
+        >
+          <div>
+            <div class="mb-3 inline-flex rounded-xl bg-violet-500/15 p-2.5 text-violet-400">
+              <BookOpenCheck class="h-5 w-5" />
+            </div>
+            <h3 class="text-sm font-semibold text-white">Điền từ vào câu</h3>
+            <p class="mt-1 text-xs text-zinc-400">
+              Đọc câu ngữ cảnh và chọn từ phù hợp vào chỗ trống ({clozeEligible.length} câu sẵn sàng).
+            </p>
+          </div>
+          <p class="mt-4 text-[11px] text-zinc-400">
+            Kỷ lục:
+            <strong class="text-amber-300">
+              {bestScores.cloze !== undefined ? `${bestScores.cloze} điểm` : "—"}
+            </strong>
+          </p>
+        </button>
+
+        <button
+          type="button"
+          disabled={scrambleEligible.length === 0}
+          onclick={() => (activeMode = "scramble")}
+          class="flex flex-col justify-between rounded-2xl border border-zinc-800 bg-zinc-900/70 p-5 text-left transition hover:border-indigo-500/60 hover:bg-zinc-900 disabled:cursor-not-allowed disabled:opacity-45"
+        >
+          <div>
+            <div class="mb-3 inline-flex rounded-xl bg-rose-500/15 p-2.5 text-rose-400">
+              <Sparkles class="h-5 w-5" />
+            </div>
+            <h3 class="text-sm font-semibold text-white">Xếp chữ chính tả</h3>
+            <p class="mt-1 text-xs text-zinc-400">
+              Ghép lại các chữ cái bị xáo trộn để luyện chính tả ({scrambleEligible.length} từ đơn).
+            </p>
+          </div>
+          <p class="mt-4 text-[11px] text-zinc-400">
+            Kỷ lục:
+            <strong class="text-amber-300">
+              {bestScores.scramble !== undefined ? `${bestScores.scramble} điểm` : "—"}
             </strong>
           </p>
         </button>

@@ -29,27 +29,31 @@
   let correctCount = $state(0);
   let question = $state<QuizQuestion | null>(null);
   let pickedId = $state<string | null>(null);
+  let direction = $state<"en-to-vi" | "vi-to-en">("en-to-vi");
   let mistakes = $state<Note[]>([]);
   let finished = $state(false);
   let bestScore = $state<number | null>(null);
+  let targetSource: Note[] = [];
   let queue: Note[] = [];
   let timer: ReturnType<typeof setInterval> | null = null;
 
   function nextQuestion() {
     pickedId = null;
     if (queue.length === 0) {
-      queue = shuffleArray(notes);
+      queue = shuffleArray(targetSource.length > 0 ? targetSource : notes);
     }
     const target = queue.pop();
     if (!target) return;
-    question = buildQuizQuestion(target, notes, mode === "audio" ? "vi-to-en" : "en-to-vi");
+    const effectiveDir = mode === "audio" ? "vi-to-en" : direction;
+    question = buildQuizQuestion(target, notes, effectiveDir);
     if (mode === "audio") {
       void playWordAudio(target.word);
     }
   }
 
-  function startGame() {
+  function startGame(customTargets?: Note[]) {
     if (timer) clearInterval(timer);
+    targetSource = customTargets && customTargets.length > 0 ? customTargets : notes;
     timeLeft = DURATION_SEC;
     score = 0;
     combo = 0;
@@ -58,7 +62,7 @@
     correctCount = 0;
     mistakes = [];
     finished = false;
-    queue = shuffleArray(notes);
+    queue = shuffleArray(targetSource);
     nextQuestion();
 
     timer = setInterval(() => {
@@ -107,7 +111,7 @@
     }
   }
 
-  onMount(startGame);
+  onMount(() => startGame());
   onDestroy(() => {
     if (timer) clearInterval(timer);
   });
@@ -137,14 +141,28 @@
         </span>
       {/if}
     </div>
-    <button
-      type="button"
-      onclick={startGame}
-      class="inline-flex items-center gap-1.5 rounded-xl border border-zinc-700 px-3 py-1.5 text-xs text-zinc-200 hover:bg-zinc-800"
-    >
-      <RotateCcw class="h-3.5 w-3.5" />
-      Chơi lại
-    </button>
+    <div class="flex items-center gap-2">
+      {#if mode === "quiz"}
+        <button
+          type="button"
+          onclick={() => {
+            direction = direction === "en-to-vi" ? "vi-to-en" : "en-to-vi";
+            startGame();
+          }}
+          class="rounded-xl border border-zinc-700 px-3 py-1.5 text-xs text-indigo-300 hover:bg-zinc-800"
+        >
+          {direction === "en-to-vi" ? "Anh → Việt" : "Việt → Anh"}
+        </button>
+      {/if}
+      <button
+        type="button"
+        onclick={() => startGame()}
+        class="inline-flex items-center gap-1.5 rounded-xl border border-zinc-700 px-3 py-1.5 text-xs text-zinc-200 hover:bg-zinc-800"
+      >
+        <RotateCcw class="h-3.5 w-3.5" />
+        Chơi lại
+      </button>
+    </div>
   </div>
 
   <div class="h-1.5 w-full overflow-hidden rounded-full bg-zinc-800">
@@ -192,13 +210,24 @@
         </div>
       {/if}
 
-      <button
-        type="button"
-        onclick={startGame}
-        class="rounded-xl bg-indigo-600 px-5 py-2.5 text-xs font-semibold text-white hover:bg-indigo-500"
-      >
-        Chơi lại
-      </button>
+      <div class="flex flex-wrap justify-center gap-2">
+        {#if mistakes.length > 0}
+          <button
+            type="button"
+            onclick={() => startGame(mistakes)}
+            class="rounded-xl border border-amber-500/50 bg-amber-500/15 px-4 py-2.5 text-xs font-semibold text-amber-200 hover:bg-amber-500/25"
+          >
+            Ôn ngay {mistakes.length} từ vừa sai
+          </button>
+        {/if}
+        <button
+          type="button"
+          onclick={() => startGame()}
+          class="rounded-xl bg-indigo-600 px-5 py-2.5 text-xs font-semibold text-white hover:bg-indigo-500"
+        >
+          Chơi lại
+        </button>
+      </div>
     </div>
   {:else if question}
     <div class="rounded-2xl border border-zinc-800 bg-zinc-900/70 p-6 text-center">
