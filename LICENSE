@@ -1,0 +1,46 @@
+V-Learning Personal & Non-Commercial License
+
+Copyright (c) 2026 V-Learning Contributors. All rights reserved.
+
+================================================================================
+1. APPLICATION SOURCE CODE (NON-COMMERCIAL / PERSONAL USE ONLY)
+================================================================================
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of
+this software and associated documentation files (the "Software"), to use, copy,
+modify, and build the Software strictly for PERSONAL, EDUCATIONAL, OR
+NON-COMMERCIAL PURPOSES, subject to the following conditions:
+
+1. No Commercial Use: You may NOT use, copy, modify, distribute, sublicense,
+   sell, or host the Software (or any derivative work thereof) for any
+   commercial purpose, monetary gain, paid service, SaaS offering, or
+   internal business/enterprise deployment without prior written permission
+   from the copyright holder.
+2. Attribution: The above copyright notice and this permission notice shall be
+   included in all copies or substantial portions of the Software.
+3. No Warranty: THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+   EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+   MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO
+   EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES
+   OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
+   ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+   DEALINGS IN THE SOFTWARE.
+
+================================================================================
+2. DICTIONARY DATA & THIRD-PARTY DATASETS
+================================================================================
+
+The offline dictionary datasets and ETL pipeline in `scripts/dict-builder/`
+aggregate third-party linguistic resources. Those datasets are NOT governed by
+Section 1 above; instead, each dataset remains subject to its respective
+upstream open license and attribution requirements, including:
+
+- Skypediacode English-Vietnamese Dictionary (CC BY-SA 4.0; upstream MinhQND & OVDP)
+- Kaikki.org / Wiktionary extracts (CC BY-SA 4.0)
+- Open English WordNet (OEWN) (CC BY 4.0)
+- CMU Pronouncing Dictionary (CMUdict) (BSD-style permissive license)
+- SCOWL / VarCon Wordlists & GCIDE (their respective open licenses)
+
+Any redistribution of compiled dictionary packs (`dict-*.db` / `dict-*.db.zst`)
+must comply with the upstream licenses above, including ShareAlike (CC BY-SA 4.0)
+and attribution obligations.
