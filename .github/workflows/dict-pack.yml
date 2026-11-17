@@ -20,11 +20,11 @@ on:
       with_kaikki_en:
         description: Download & ingest Kaikki English (~2GB)
         type: boolean
-        default: false
+        default: true
       publish_release:
         description: Publish built .db.zst and manifest.json to GitHub Releases
         type: boolean
-        default: false
+        default: true
 
 permissions:
   contents: write
