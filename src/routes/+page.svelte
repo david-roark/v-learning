@@ -11,6 +11,7 @@
   import DeckModal from "$lib/features/decks/components/DeckModal.svelte";
   import DeckNotesModal from "$lib/features/decks/components/DeckNotesModal.svelte";
   import DictionaryView from "$lib/features/dictionary/components/DictionaryView.svelte";
+  import MiniGameView from "$lib/features/games/MiniGameView.svelte";
   import ReaderView from "$lib/features/reader/ReaderView.svelte";
   import { studyApi } from "$lib/features/study/api";
   import StudySession from "$lib/features/study/components/StudySession.svelte";
@@ -38,6 +39,7 @@
     decks: "Bộ thẻ của bạn",
     dictionary: "Từ điển Offline & Online",
     reader: "Đọc báo, Sách & Video",
+    games: "Mini-game ôn từ vựng",
     analytics: "Thống kê học tập",
   };
 
@@ -88,7 +90,8 @@
     if (e.key === "1") activeTab = "decks";
     else if (e.key === "2") activeTab = "dictionary";
     else if (e.key === "3") activeTab = "reader";
-    else if (e.key === "4") activeTab = "analytics";
+    else if (e.key === "4") activeTab = "games";
+    else if (e.key === "5") activeTab = "analytics";
   }
 
   onMount(() => {
@@ -193,6 +196,9 @@
           <div class={activeTab === "reader" ? "" : "hidden"}>
             <ReaderView {decks} onCardAdded={refreshDashboard} />
           </div>
+          {#if activeTab === "games"}
+            <MiniGameView {decks} />
+          {/if}
         </div>
       </main>
     </div>

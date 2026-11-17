@@ -4,6 +4,7 @@
     BookA,
     BookOpenText,
     Cloud,
+    Gamepad2,
     Layers,
     Palette,
     Settings,
@@ -11,7 +12,7 @@
     Volume2,
   } from "@lucide/svelte";
 
-  export type NavTab = "decks" | "dictionary" | "reader" | "analytics";
+  export type NavTab = "decks" | "dictionary" | "reader" | "games" | "analytics";
 
   interface Props {
     activeTab: NavTab;
@@ -35,7 +36,8 @@
     { id: "decks", label: "Bộ thẻ", shortcut: "1", icon: Layers },
     { id: "dictionary", label: "Từ điển", shortcut: "2", icon: BookA },
     { id: "reader", label: "Đọc & Xem", shortcut: "3", icon: BookOpenText },
-    { id: "analytics", label: "Thống kê", shortcut: "4", icon: BarChart3 },
+    { id: "games", label: "Mini-game", shortcut: "4", icon: Gamepad2 },
+    { id: "analytics", label: "Thống kê", shortcut: "5", icon: BarChart3 },
   ];
 </script>
 
