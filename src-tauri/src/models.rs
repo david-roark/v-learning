@@ -202,11 +202,43 @@ pub struct ForecastDay {
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
+pub struct RatingCounts {
+    pub again: i64,
+    pub hard: i64,
+    pub good: i64,
+    pub easy: i64,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LeechWord {
+    pub word: String,
+    pub meaning: String,
+    pub lapses: i64,
+    pub reps: i64,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct AnalyticsSummary {
     pub streak_days: i64,
     pub total_reviews: i64,
     pub true_retention: f64,
+    pub forget_rate: f64,
     pub mature_cards: i64,
+    pub total_notes: i64,
+    pub total_cards: i64,
+    pub new_cards: i64,
+    pub learning_cards: i64,
+    pub young_cards: i64,
+    pub rating_counts: RatingCounts,
+    pub total_study_ms: i64,
+    pub avg_duration_ms: i64,
+    pub study_ms_today: i64,
+    pub hourly_weekday_heatmap: Vec<Vec<i64>>,
+    pub peak_hour: Option<i64>,
+    pub peak_weekday: Option<i64>,
+    pub leech_words: Vec<LeechWord>,
     pub heatmap: Vec<HeatmapDay>,
     pub forecast_7d: Vec<ForecastDay>,
 }

@@ -125,7 +125,7 @@
           {#if activeTab === "dictionary"}
             <DictionaryView {decks} onCardAdded={refreshDashboard} />
           {:else if activeTab === "analytics"}
-            <AnalyticsView />
+            <AnalyticsView {decks} />
           {:else if activeTab === "decks"}
             <!-- Compact Daily Summary + Actions -->
             <div class="mb-5 flex flex-col gap-3 sm:flex-row sm:items-stretch sm:justify-between">

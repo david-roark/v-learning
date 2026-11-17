@@ -165,11 +165,39 @@ export interface ForecastDay {
   dueCount: number;
 }
 
+export interface RatingCounts {
+  again: number;
+  hard: number;
+  good: number;
+  easy: number;
+}
+
+export interface LeechWord {
+  word: string;
+  meaning: string;
+  lapses: number;
+  reps: number;
+}
+
 export interface AnalyticsSummary {
   streakDays: number;
   totalReviews: number;
   trueRetention: number;
+  forgetRate: number;
   matureCards: number;
+  totalNotes: number;
+  totalCards: number;
+  newCards: number;
+  learningCards: number;
+  youngCards: number;
+  ratingCounts: RatingCounts;
+  totalStudyMs: number;
+  avgDurationMs: number;
+  studyMsToday: number;
+  hourlyWeekdayHeatmap: number[][];
+  peakHour: number | null;
+  peakWeekday: number | null;
+  leechWords: LeechWord[];
   heatmap: HeatmapDay[];
   forecast7d: ForecastDay[];
 }
