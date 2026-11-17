@@ -232,6 +232,45 @@
     }
   }
 
+  let swipeStart: { x: number; y: number } | null = null;
+
+  function handlePageTouchStart(e: TouchEvent) {
+    if (totalItems <= 1 || e.touches.length !== 1) {
+      swipeStart = null;
+      return;
+    }
+    const t = e.touches[0];
+    swipeStart = { x: t.clientX, y: t.clientY };
+  }
+
+  function handlePageTouchEnd(e: TouchEvent) {
+    if (!swipeStart || totalItems <= 1 || e.changedTouches.length !== 1) {
+      swipeStart = null;
+      return;
+    }
+    const t = e.changedTouches[0];
+    const dx = t.clientX - swipeStart.x;
+    const dy = t.clientY - swipeStart.y;
+    swipeStart = null;
+
+    if (Math.abs(dx) < 65 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+    if ((window.getSelection()?.toString().trim().length ?? 0) > 0) return;
+
+    if (pdfSession && pdfContainer && pdfContainer.scrollWidth > pdfContainer.clientWidth + 4) {
+      const atLeftEdge = pdfContainer.scrollLeft <= 2;
+      const atRightEdge =
+        pdfContainer.scrollLeft + pdfContainer.clientWidth >= pdfContainer.scrollWidth - 2;
+      if (dx > 0 && !atLeftEdge) return;
+      if (dx < 0 && !atRightEdge) return;
+    }
+
+    if (dx < 0 && currentPos < totalItems - 1) {
+      goToPosition(currentPos + 1);
+    } else if (dx > 0 && currentPos > 0) {
+      goToPosition(currentPos - 1);
+    }
+  }
+
   async function handleQuickCreateDeck(e: Event) {
     e.preventDefault();
     const name = newDeckName.trim();
@@ -714,78 +753,112 @@
             onWordClick={handleWordClick}
           />
         </div>
-      {:else if pdfSession}
-        <div
-          bind:this={pdfContainer}
-          class="flex h-[calc(100vh-8.5rem)] items-start justify-center overflow-auto rounded-2xl border border-zinc-800 bg-zinc-950 p-2 sm:p-4"
-        >
-          <div class="relative inline-block shadow-lg">
-            <canvas bind:this={pdfCanvas} class="block rounded-lg"></canvas>
-            <div bind:this={pdfTextLayer} class="textLayer"></div>
-          </div>
-        </div>
       {:else}
-        {#snippet renderTokens(tokenList: TextToken[])}
-          {#each tokenList as tok, tIdx (tIdx)}
-            {#if tok.isWord}
-              <button
-                type="button"
-                data-reader-word="true"
-                onclick={(e) =>
-                  handleWordClick(tok, (e.currentTarget as HTMLElement).getBoundingClientRect())}
-                class="select-text rounded px-0.5 transition hover:bg-indigo-500/25 hover:text-indigo-200 {selectedToken?.text ===
-                tok.text
-                  ? 'bg-indigo-600/30 text-indigo-200'
-                  : ''}"
-              >
-                {tok.text}
-              </button>
-            {:else}
-              <span>{tok.text}</span>
-            {/if}
-          {/each}
-        {/snippet}
-
         <div
-          bind:this={textContainer}
-          class="h-[calc(100vh-8.5rem)] overflow-y-auto rounded-2xl border border-zinc-800 bg-zinc-900/70 p-4 text-base leading-8 text-zinc-200 sm:p-8"
+          class="relative"
+          role="presentation"
+          ontouchstart={handlePageTouchStart}
+          ontouchend={handlePageTouchEnd}
         >
-          {#if articleBlocks.length > 0 && sections.length === 0}
-            <article class="mx-auto max-w-3xl space-y-4">
-              {#each articleBlocks as block, bIdx (bIdx)}
-                {@const blockTokens = tokenizeWithSentences(block.text)}
-                {#if block.tag === "h1"}
-                  <h1 class="text-2xl leading-snug font-bold text-white">
-                    {@render renderTokens(blockTokens)}
-                  </h1>
-                {:else if block.tag === "h2"}
-                  <h2
-                    class="mt-6 border-b border-zinc-800 pb-1.5 text-xl font-semibold text-zinc-100"
+          {#if pdfSession}
+            <div
+              bind:this={pdfContainer}
+              class="flex h-[calc(100vh-8.5rem)] items-start justify-center overflow-auto rounded-2xl border border-zinc-800 bg-zinc-950 p-2 sm:p-4"
+            >
+              <div class="relative inline-block shadow-lg">
+                <canvas bind:this={pdfCanvas} class="block rounded-lg"></canvas>
+                <div bind:this={pdfTextLayer} class="textLayer"></div>
+              </div>
+            </div>
+          {:else}
+            {#snippet renderTokens(tokenList: TextToken[])}
+              {#each tokenList as tok, tIdx (tIdx)}
+                {#if tok.isWord}
+                  <button
+                    type="button"
+                    data-reader-word="true"
+                    onclick={(e) =>
+                      handleWordClick(tok, (e.currentTarget as HTMLElement).getBoundingClientRect())}
+                    class="select-text rounded px-0.5 transition hover:bg-indigo-500/25 hover:text-indigo-200 {selectedToken?.text ===
+                    tok.text
+                      ? 'bg-indigo-600/30 text-indigo-200'
+                      : ''}"
                   >
-                    {@render renderTokens(blockTokens)}
-                  </h2>
-                {:else if block.tag === "h3"}
-                  <h3 class="mt-4 text-lg font-semibold text-zinc-200">
-                    {@render renderTokens(blockTokens)}
-                  </h3>
-                {:else if block.tag === "blockquote"}
-                  <blockquote class="border-l-2 border-indigo-500/60 pl-4 text-zinc-300 italic">
-                    {@render renderTokens(blockTokens)}
-                  </blockquote>
-                {:else if block.tag === "li"}
-                  <div class="flex gap-2.5 pl-3">
-                    <span class="mt-0.5 text-indigo-400">•</span>
-                    <div class="flex-1">{@render renderTokens(blockTokens)}</div>
-                  </div>
+                    {tok.text}
+                  </button>
                 {:else}
-                  <p class="leading-7 text-zinc-200">
-                    {@render renderTokens(blockTokens)}
-                  </p>
+                  <span>{tok.text}</span>
                 {/if}
               {/each}
-            </article>
-          {:else}
-            {@render renderTokens(tokens)}
+            {/snippet}
+
+            <div
+              bind:this={textContainer}
+              class="h-[calc(100vh-8.5rem)] overflow-y-auto rounded-2xl border border-zinc-800 bg-zinc-900/70 p-4 text-base leading-8 text-zinc-200 sm:p-8"
+            >
+              {#if articleBlocks.length > 0 && sections.length === 0}
+                <article class="mx-auto max-w-3xl space-y-4">
+                  {#each articleBlocks as block, bIdx (bIdx)}
+                    {@const blockTokens = tokenizeWithSentences(block.text)}
+                    {#if block.tag === "h1"}
+                      <h1 class="text-2xl leading-snug font-bold text-white">
+                        {@render renderTokens(blockTokens)}
+                      </h1>
+                    {:else if block.tag === "h2"}
+                      <h2
+                        class="mt-6 border-b border-zinc-800 pb-1.5 text-xl font-semibold text-zinc-100"
+                      >
+                        {@render renderTokens(blockTokens)}
+                      </h2>
+                    {:else if block.tag === "h3"}
+                      <h3 class="mt-4 text-lg font-semibold text-zinc-200">
+                        {@render renderTokens(blockTokens)}
+                      </h3>
+                    {:else if block.tag === "blockquote"}
+                      <blockquote class="border-l-2 border-indigo-500/60 pl-4 text-zinc-300 italic">
+                        {@render renderTokens(blockTokens)}
+                      </blockquote>
+                    {:else if block.tag === "li"}
+                      <div class="flex gap-2.5 pl-3">
+                        <span class="mt-0.5 text-indigo-400">•</span>
+                        <div class="flex-1">{@render renderTokens(blockTokens)}</div>
+                      </div>
+                    {:else}
+                      <p class="leading-7 text-zinc-200">
+                        {@render renderTokens(blockTokens)}
+                      </p>
+                    {/if}
+                  {/each}
+                </article>
+              {:else}
+                {@render renderTokens(tokens)}
+              {/if}
+            </div>
+          {/if}
+
+          {#if totalItems > 1}
+            {#if currentPos > 0}
+              <button
+                type="button"
+                onclick={() => goToPosition(currentPos - 1)}
+                aria-label="Trang trước"
+                title="Trang / Chương trước (←)"
+                class="absolute top-1/2 left-2 z-20 -translate-y-1/2 rounded-full border border-zinc-700/70 bg-zinc-900/75 p-2 text-zinc-200 opacity-60 shadow-lg backdrop-blur-sm transition hover:border-indigo-500 hover:bg-indigo-600 hover:text-white hover:opacity-100 active:scale-95 sm:left-3 sm:p-2.5"
+              >
+                <ChevronLeft class="h-4 w-4 sm:h-5 sm:w-5" />
+              </button>
+            {/if}
+            {#if currentPos < totalItems - 1}
+              <button
+                type="button"
+                onclick={() => goToPosition(currentPos + 1)}
+                aria-label="Trang sau"
+                title="Trang / Chương sau (→)"
+                class="absolute top-1/2 right-2 z-20 -translate-y-1/2 rounded-full border border-zinc-700/70 bg-zinc-900/75 p-2 text-zinc-200 opacity-60 shadow-lg backdrop-blur-sm transition hover:border-indigo-500 hover:bg-indigo-600 hover:text-white hover:opacity-100 active:scale-95 sm:right-3 sm:p-2.5"
+              >
+                <ChevronRight class="h-4 w-4 sm:h-5 sm:w-5" />
+              </button>
+            {/if}
           {/if}
         </div>
       {/if}
