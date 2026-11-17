@@ -96,7 +96,7 @@ pub fn parse_translate_response(json_str: &str) -> AppResult<String> {
     Ok(trimmed)
 }
 
-fn percent_encode_query(input: &str) -> String {
+pub(crate) fn percent_encode_query(input: &str) -> String {
     let mut out = String::with_capacity(input.len() * 2);
     for b in input.as_bytes() {
         match b {
@@ -175,7 +175,17 @@ pub async fn fetch_online_entry(word: &str) -> AppResult<UpsertDictionaryInput> 
         "https://api.dictionaryapi.dev/api/v2/entries/en/{}",
         trimmed.to_lowercase()
     );
-    let resp = reqwest::get(&url)
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(10))
+        .build()
+        .map_err(|e| AppError::Internal(format!("Không thể tạo HTTP client: {e}")))?;
+    let resp = client
+        .get(&url)
+        .header(
+            reqwest::header::USER_AGENT,
+            "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
+        )
+        .send()
         .await
         .map_err(|e| AppError::Internal(format!("Không thể kết nối từ điển online: {e}")))?;
 

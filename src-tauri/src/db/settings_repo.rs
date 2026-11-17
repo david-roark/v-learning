@@ -1,7 +1,7 @@
 use rusqlite::{Connection, OptionalExtension, params};
 
 use crate::error::AppResult;
-use crate::models::{AiSettings, WebDavSettings};
+use crate::models::{AiSettings, TtsSettings, WebDavSettings};
 
 fn get_key(conn: &Connection, key: &str) -> AppResult<Option<String>> {
     let val = conn
@@ -54,6 +54,49 @@ pub fn save_webdav_settings(conn: &Connection, settings: &WebDavSettings) -> App
     Ok(())
 }
 
+pub fn get_tts_settings(conn: &Connection) -> AppResult<TtsSettings> {
+    let default = TtsSettings::default();
+    let order = get_key(conn, "tts_fallback_order")?
+        .and_then(|raw| serde_json::from_str::<Vec<String>>(&raw).ok())
+        .filter(|v| !v.is_empty())
+        .unwrap_or(default.fallback_order);
+    let voice = get_key(conn, "tts_voice")?
+        .filter(|v| !v.trim().is_empty())
+        .unwrap_or(default.voice);
+    let mut provider_voices = default.provider_voices;
+    if let Some(raw) = get_key(conn, "tts_provider_voices")?
+        && let Ok(parsed) = serde_json::from_str::<std::collections::HashMap<String, String>>(&raw)
+    {
+        for (k, v) in parsed {
+            if !v.trim().is_empty() {
+                provider_voices.insert(k, v);
+            }
+        }
+    }
+    Ok(TtsSettings {
+        fallback_order: order,
+        voice,
+        provider_voices,
+    })
+}
+
+pub fn save_tts_settings(conn: &Connection, settings: &TtsSettings) -> AppResult<()> {
+    let clean_order: Vec<String> = settings
+        .fallback_order
+        .iter()
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty())
+        .collect();
+    let json_order = serde_json::to_string(&clean_order)
+        .map_err(|e| crate::error::AppError::Internal(e.to_string()))?;
+    let json_voices = serde_json::to_string(&settings.provider_voices)
+        .map_err(|e| crate::error::AppError::Internal(e.to_string()))?;
+    set_key(conn, "tts_fallback_order", &json_order)?;
+    set_key(conn, "tts_voice", settings.voice.trim())?;
+    set_key(conn, "tts_provider_voices", &json_voices)?;
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -83,5 +126,37 @@ mod tests {
         );
         assert_eq!(loaded.api_key, "AIzaTestKey");
         assert_eq!(loaded.model, "gemini-2.5-flash");
+    }
+
+    #[test]
+    fn tts_settings_defaults_and_save_roundtrip() {
+        let conn = open_in_memory_for_test();
+        let defaults = get_tts_settings(&conn).expect("defaults");
+        assert_eq!(
+            defaults.fallback_order,
+            vec!["google_tts", "youdao_tts", "system_tts"]
+        );
+        assert_eq!(defaults.voice, "en-US");
+
+        save_tts_settings(
+            &conn,
+            &TtsSettings {
+                fallback_order: vec!["google_tts".into(), "youdao_tts".into()],
+                voice: " en-GB ".into(),
+                provider_voices: std::collections::HashMap::from([(
+                    "youdao_tts".into(),
+                    "uk".into(),
+                )]),
+            },
+        )
+        .expect("save tts");
+
+        let loaded = get_tts_settings(&conn).expect("loaded tts");
+        assert_eq!(loaded.fallback_order, vec!["google_tts", "youdao_tts"]);
+        assert_eq!(loaded.voice, "en-GB");
+        assert_eq!(
+            loaded.provider_voices.get("youdao_tts").map(String::as_str),
+            Some("uk")
+        );
     }
 }

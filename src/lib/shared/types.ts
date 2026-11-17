@@ -132,6 +132,12 @@ export interface DictPackInfo {
   attribution: string | null;
 }
 
+export interface TtsSettings {
+  fallbackOrder: string[];
+  voice: string;
+  providerVoices: Record<string, string>;
+}
+
 export interface AiSettings {
   baseUrl: string;
   apiKey: string;

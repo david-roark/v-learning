@@ -4,6 +4,7 @@
   import AiSettingsModal from "$lib/features/ai-practice/AiSettingsModal.svelte";
   import AnalyticsView from "$lib/features/analytics/AnalyticsView.svelte";
   import AppearanceModal from "$lib/features/appearance/AppearanceModal.svelte";
+  import TtsSettingsModal from "$lib/features/appearance/TtsSettingsModal.svelte";
   import NoteFormModal from "$lib/features/card-editor/components/NoteFormModal.svelte";
   import { decksApi } from "$lib/features/decks/api";
   import DeckList from "$lib/features/decks/components/DeckList.svelte";
@@ -28,6 +29,7 @@
   let showAiSettings = $state(false);
   let showSyncModal = $state(false);
   let showAppearance = $state(false);
+  let showTtsSettings = $state(false);
   let addCardTarget = $state<DeckWithStats | null>(null);
   let manageNotesTarget = $state<DeckWithStats | null>(null);
   let apkgMsg = $state("");
@@ -106,6 +108,7 @@
       {activeTab}
       onSelectTab={(tab) => (activeTab = tab)}
       onOpenAppearance={() => (showAppearance = true)}
+      onOpenTtsSettings={() => (showTtsSettings = true)}
       onOpenSync={() => (showSyncModal = true)}
       onOpenAiSettings={() => (showAiSettings = true)}
     />
@@ -229,3 +232,5 @@
 />
 
 <AppearanceModal open={showAppearance} onClose={() => (showAppearance = false)} />
+
+<TtsSettingsModal open={showTtsSettings} onClose={() => (showTtsSettings = false)} />

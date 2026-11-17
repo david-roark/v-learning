@@ -8,6 +8,7 @@
     Palette,
     Settings,
     Sparkles,
+    Volume2,
   } from "@lucide/svelte";
 
   export type NavTab = "decks" | "dictionary" | "reader" | "analytics";
@@ -16,11 +17,19 @@
     activeTab: NavTab;
     onSelectTab: (tab: NavTab) => void;
     onOpenAppearance: () => void;
+    onOpenTtsSettings: () => void;
     onOpenSync: () => void;
     onOpenAiSettings: () => void;
   }
 
-  let { activeTab, onSelectTab, onOpenAppearance, onOpenSync, onOpenAiSettings }: Props = $props();
+  let {
+    activeTab,
+    onSelectTab,
+    onOpenAppearance,
+    onOpenTtsSettings,
+    onOpenSync,
+    onOpenAiSettings,
+  }: Props = $props();
 
   const navItems: Array<{ id: NavTab; label: string; shortcut: string; icon: typeof Layers }> = [
     { id: "decks", label: "Bộ thẻ", shortcut: "1", icon: Layers },
@@ -94,6 +103,14 @@
       >
         <Palette class="h-4 w-4" />
         Giao diện & Font
+      </button>
+      <button
+        type="button"
+        onclick={onOpenTtsSettings}
+        class="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-xs text-zinc-400 transition hover:bg-zinc-800/70 hover:text-zinc-100"
+      >
+        <Volume2 class="h-4 w-4" />
+        Phát âm (TTS)
       </button>
       <button
         type="button"

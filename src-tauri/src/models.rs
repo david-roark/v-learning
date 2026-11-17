@@ -227,3 +227,29 @@ pub struct BackupRestoreReport {
     pub cards: i64,
     pub review_logs: i64,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TtsSettings {
+    pub fallback_order: Vec<String>,
+    pub voice: String,
+    #[serde(default)]
+    pub provider_voices: std::collections::HashMap<String, String>,
+}
+
+impl Default for TtsSettings {
+    fn default() -> Self {
+        let mut provider_voices = std::collections::HashMap::new();
+        provider_voices.insert("google_tts".to_string(), "en-US".to_string());
+        provider_voices.insert("youdao_tts".to_string(), "us".to_string());
+        Self {
+            fallback_order: vec![
+                "google_tts".to_string(),
+                "youdao_tts".to_string(),
+                "system_tts".to_string(),
+            ],
+            voice: "en-US".to_string(),
+            provider_voices,
+        }
+    }
+}
