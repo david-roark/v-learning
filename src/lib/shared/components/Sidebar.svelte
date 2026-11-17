@@ -8,7 +8,6 @@
     Layers,
     Palette,
     Settings,
-    Sparkles,
     Volume2,
   } from "@lucide/svelte";
 
@@ -47,11 +46,11 @@
   <div class="space-y-6">
     <!-- Brand -->
     <div class="flex items-center gap-2.5 px-2 pt-1">
-      <div
-        class="flex h-8 w-8 items-center justify-center rounded-xl bg-indigo-600 text-white shadow-md shadow-indigo-600/20"
-      >
-        <Sparkles class="h-4 w-4" />
-      </div>
+      <img
+        src="/logo.png"
+        alt="V-Learning"
+        class="h-8 w-8 rounded-xl shadow-md shadow-indigo-600/20"
+      />
       <div>
         <h1 class="text-sm font-bold tracking-tight text-white">V-Learning</h1>
         <p class="text-[10px] text-zinc-400">FSRS · Offline-first</p>
