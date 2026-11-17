@@ -94,37 +94,42 @@ export interface DailyStats {
 
 export type Rating = 1 | 2 | 3 | 4;
 
+export interface DictionarySense {
+  pos: string;
+  definitionEn: string | null;
+  definitionVi: string | null;
+  examples: string[];
+  tags: string[];
+  synonyms: string[];
+  antonyms: string[];
+}
+
 export interface DictionaryEntry {
   id: number;
   word: string;
   ipa: string | null;
+  ipaUs: string | null;
+  ipaUk: string | null;
   pos: string | null;
   meaningVi: string | null;
   meaningEn: string | null;
   exampleSentence: string | null;
   audioUrl: string | null;
   source: string;
+  matchedForm: string | null;
+  variants: string[];
+  sources: string[];
+  senses: DictionarySense[];
 }
 
-export interface DictionaryPack {
-  id: string;
-  name: string;
-  description: string;
-  sizeHint: string;
-}
-
-export interface ImportReport {
-  inserted: number;
-  updated: number;
-  skipped: number;
-  totalAfter: number;
-}
-
-export interface ImportProgress {
-  stage: "downloading" | "importing" | "done";
-  current: number;
-  total: number;
-  message: string;
+export interface DictPackInfo {
+  installed: boolean;
+  profile: string | null;
+  wordCount: number;
+  senseCount: number;
+  formCount: number;
+  builtAt: string | null;
+  attribution: string | null;
 }
 
 export interface AiSettings {

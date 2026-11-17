@@ -8,12 +8,18 @@ fn row_to_entry(row: &Row<'_>) -> rusqlite::Result<DictionaryEntry> {
         id: row.get(0)?,
         word: row.get(1)?,
         ipa: row.get(2)?,
+        ipa_us: None,
+        ipa_uk: None,
         pos: row.get(3)?,
         meaning_vi: row.get(4)?,
         meaning_en: row.get(5)?,
         example_sentence: row.get(6)?,
         audio_url: row.get(7)?,
         source: row.get(8)?,
+        matched_form: None,
+        variants: Vec::new(),
+        sources: Vec::new(),
+        senses: Vec::new(),
     })
 }
 
@@ -155,6 +161,36 @@ mod tests {
     #[test]
     fn fts_search_and_upsert_work() {
         let conn = open_in_memory_for_test();
+
+        upsert_entry(
+            &conn,
+            &UpsertDictionaryInput {
+                word: "ubiquitous".into(),
+                ipa: Some("/juːˈbɪk.wɪ.təs/".into()),
+                pos: Some("adj".into()),
+                meaning_vi: Some("có mặt ở khắp mọi nơi".into()),
+                meaning_en: None,
+                example_sentence: None,
+                audio_url: None,
+                source: "tsv".into(),
+            },
+        )
+        .expect("seed ubiquitous");
+
+        upsert_entry(
+            &conn,
+            &UpsertDictionaryInput {
+                word: "pragmatic".into(),
+                ipa: Some("/præɡˈmæt.ɪk/".into()),
+                pos: Some("adj".into()),
+                meaning_vi: Some("thực tế".into()),
+                meaning_en: None,
+                example_sentence: None,
+                audio_url: None,
+                source: "tsv".into(),
+            },
+        )
+        .expect("seed pragmatic");
 
         let exact = find_exact(&conn, "Ubiquitous").expect("find_exact");
         assert!(exact.is_some());

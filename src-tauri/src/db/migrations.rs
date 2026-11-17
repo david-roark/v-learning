@@ -102,77 +102,18 @@ CREATE TABLE IF NOT EXISTS app_settings (
 );
 "#;
 
-const STARTER_DICT: &[(&str, &str, &str, &str, &str)] = &[
-    (
-        "ubiquitous",
-        "/juːˈbɪk.wɪ.təs/",
-        "adj",
-        "có mặt ở khắp mọi nơi",
-        "Smartphones have become ubiquitous in modern life.",
-    ),
-    (
-        "pragmatic",
-        "/præɡˈmæt.ɪk/",
-        "adj",
-        "thực tế, thực dụng",
-        "We need a pragmatic approach to solve this issue.",
-    ),
-    (
-        "resilient",
-        "/rɪˈzɪl.i.ənt/",
-        "adj",
-        "kiên cường, mau phục hồi",
-        "Children are often remarkably resilient.",
-    ),
-    (
-        "ambiguous",
-        "/æmˈbɪɡ.ju.əs/",
-        "adj",
-        "mơ hồ, đa nghĩa",
-        "The wording of the contract is somewhat ambiguous.",
-    ),
-    (
-        "eloquent",
-        "/ˈel.ə.kwənt/",
-        "adj",
-        "hùng hồn, có sức thuyết phục",
-        "She gave an eloquent speech about climate change.",
-    ),
-    (
-        "ephemeral",
-        "/ɪˈfem.ər.əl/",
-        "adj",
-        "phù du, ngắn ngủi",
-        "Fame in the digital age is often ephemeral.",
-    ),
-    (
-        "meticulous",
-        "/məˈtɪk.jə.ləs/",
-        "adj",
-        "tỉ mỉ, kỹ lưỡng",
-        "He kept meticulous records of every transaction.",
-    ),
-    (
-        "inevitable",
-        "/ɪˈnev.ɪ.tə.bəl/",
-        "adj",
-        "không thể tránh khỏi",
-        "Change is an inevitable part of growth.",
-    ),
-];
-
 pub fn run_migrations(conn: &Connection) -> AppResult<()> {
     conn.execute_batch(SCHEMA_SQL)?;
-
-    let count: i64 = conn.query_row("SELECT COUNT(*) FROM dictionary_entries", [], |r| r.get(0))?;
-    if count == 0 {
-        for (word, ipa, pos, meaning_vi, example) in STARTER_DICT {
-            conn.execute(
-                "INSERT OR IGNORE INTO dictionary_entries (word, ipa, pos, meaning_vi, example_sentence, source)
-                 VALUES (?1, ?2, ?3, ?4, ?5, 'local')",
-                rusqlite::params![word, ipa, pos, meaning_vi, example],
-            )?;
-        }
+    // Remove legacy bulk-imported packs from user DB (now served by separate dict.db)
+    let deleted = conn.execute(
+        "DELETE FROM dictionary_entries WHERE source IN ('anhviet109k', 'ipa-dict', 'fvdp', 'ipa-tsv')",
+        [],
+    )?;
+    if deleted > 0 {
+        let _ = conn.execute(
+            "INSERT INTO dictionary_fts(dictionary_fts) VALUES('optimize')",
+            [],
+        );
     }
     Ok(())
 }

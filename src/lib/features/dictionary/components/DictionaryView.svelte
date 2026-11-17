@@ -1,16 +1,20 @@
 <script lang="ts">
-  import { listen } from "@tauri-apps/api/event";
-  import { BookA, Download, Globe, Plus, Search, Upload, Volume2 } from "@lucide/svelte";
-  import { onDestroy, onMount } from "svelte";
+  import {
+    BookA,
+    Database,
+    Download,
+    Globe,
+    Plus,
+    Search,
+    Trash2,
+    Upload,
+    Volume2,
+  } from "@lucide/svelte";
+  import { onMount } from "svelte";
   import { notesApi } from "$lib/features/card-editor/api";
   import { playWordAudio } from "$lib/shared/audio";
   import Select from "$lib/shared/components/Select.svelte";
-  import type {
-    DeckWithStats,
-    DictionaryEntry,
-    DictionaryPack,
-    ImportProgress,
-  } from "$lib/shared/types";
+  import type { DeckWithStats, DictPackInfo, DictionaryEntry } from "$lib/shared/types";
   import { dictionaryApi } from "../api";
 
   interface Props {
@@ -22,16 +26,15 @@
 
   let query = $state("");
   let entries = $state<DictionaryEntry[]>([]);
-  let packs = $state<DictionaryPack[]>([]);
+  let packInfo = $state<DictPackInfo | null>(null);
+  let installingDbPack = $state(false);
+  let installProgress = $state(0);
   let totalCount = $state(0);
   let selectedDeckId = $state("");
   let loading = $state(false);
-  let downloadingPackId = $state<string | null>(null);
-  let progress = $state<ImportProgress | null>(null);
   let showImport = $state(false);
   let statusMsg = $state("");
   let error = $state("");
-  let unlisten: (() => void) | null = null;
 
   $effect(() => {
     if (!selectedDeckId && decks.length > 0) {
@@ -54,6 +57,11 @@
     } finally {
       loading = false;
     }
+  }
+
+  async function handleQuickSearch(word: string) {
+    query = word;
+    await loadList();
   }
 
   async function handleOnlineLookup(e: Event) {
@@ -115,39 +123,48 @@
     }
   }
 
-  async function handleDownloadPack(pack: DictionaryPack) {
-    downloadingPackId = pack.id;
-    progress = {
-      stage: "downloading",
-      current: 0,
-      total: 0,
-      message: `Đang kết nối để tải ${pack.name}...`,
-    };
+  async function handleInstallDbPack(e: Event) {
+    const input = e.currentTarget as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+    installingDbPack = true;
+    installProgress = 0;
     error = "";
     statusMsg = "";
     try {
-      const report = await dictionaryApi.downloadPack(pack.id);
-      statusMsg = `Hoàn tất "${pack.name}": +${report.inserted.toLocaleString()} mới · ${report.updated.toLocaleString()} cập nhật · ${report.skipped.toLocaleString()} bỏ qua trùng (Tổng: ${report.totalAfter.toLocaleString()} từ).`;
+      packInfo = await dictionaryApi.installPackFile(file, (pct) => {
+        installProgress = pct;
+      });
+      statusMsg = `Đã cài đặt gói từ điển "${packInfo.profile ?? "offline"}" (${packInfo.wordCount.toLocaleString()} từ, ${packInfo.formCount.toLocaleString()} biến thể).`;
       await loadList();
     } catch (err) {
-      statusMsg = "";
       error = String(err);
     } finally {
-      downloadingPackId = null;
-      progress = null;
+      installingDbPack = false;
+      installProgress = 0;
+      input.value = "";
+    }
+  }
+
+  async function handleRemoveDbPack() {
+    installingDbPack = true;
+    error = "";
+    statusMsg = "";
+    try {
+      await dictionaryApi.removePack();
+      packInfo = await dictionaryApi.getPackInfo();
+      statusMsg = "Đã gỡ gói từ điển dict.db.";
+      await loadList();
+    } catch (err) {
+      error = String(err);
+    } finally {
+      installingDbPack = false;
     }
   }
 
   onMount(async () => {
-    unlisten = await listen<ImportProgress>("dict-import-progress", (ev) => {
-      progress = ev.payload;
-    });
-    packs = await dictionaryApi.listPacks();
+    packInfo = await dictionaryApi.getPackInfo();
     await loadList();
-  });
-
-  onDestroy(() => {
-    unlisten?.();
   });
 </script>
 
@@ -192,36 +209,66 @@
     <div
       class="space-y-4 rounded-2xl border border-zinc-800 bg-zinc-900/80 p-4 text-xs text-zinc-300"
     >
-      <div>
-        <p class="font-semibold text-white">Gói từ điển Offline có sẵn (Tải 1 chạm)</p>
-        <div class="mt-2.5 grid gap-2.5 sm:grid-cols-2">
-          {#each packs as pack (pack.id)}
-            <div
-              class="flex flex-col justify-between rounded-xl border border-zinc-800 bg-zinc-950/70 p-3.5"
+      <div class="rounded-xl border border-indigo-500/30 bg-indigo-950/20 p-3.5">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <div class="flex items-center gap-2">
+            <Database class="h-4 w-4 text-indigo-400" />
+            <span class="font-semibold text-white">Gói từ điển Offline hợp nhất (dict.db)</span>
+            {#if packInfo?.installed}
+              <span class="rounded bg-emerald-500/20 px-1.5 py-0.5 text-[10px] text-emerald-300">
+                Đã cài ({packInfo.profile ?? "custom"})
+              </span>
+            {:else}
+              <span class="rounded bg-zinc-800 px-1.5 py-0.5 text-[10px] text-zinc-400">
+                Chưa cài
+              </span>
+            {/if}
+          </div>
+          <div class="flex items-center gap-2">
+            <label
+              class="inline-flex cursor-pointer items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-indigo-500 {installingDbPack
+                ? 'pointer-events-none opacity-50'
+                : ''}"
             >
-              <div>
-                <div class="flex items-center justify-between gap-2">
-                  <span class="font-medium text-zinc-100">{pack.name}</span>
-                  <span
-                    class="shrink-0 rounded bg-zinc-800 px-1.5 py-0.5 text-[10px] text-zinc-400"
-                  >
-                    {pack.sizeHint}
-                  </span>
-                </div>
-                <p class="mt-1 text-[11px] text-zinc-400">{pack.description}</p>
-              </div>
+              <Upload class="h-3.5 w-3.5" />
+              {installingDbPack ? `Đang cài (${installProgress}%)...` : "Cài từ file .db"}
+              <input
+                type="file"
+                accept=".db,.sqlite,.sqlite3"
+                disabled={installingDbPack}
+                onchange={handleInstallDbPack}
+                class="hidden"
+              />
+            </label>
+            {#if packInfo?.installed}
               <button
                 type="button"
-                disabled={downloadingPackId !== null}
-                onclick={() => handleDownloadPack(pack)}
-                class="mt-3 inline-flex items-center justify-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-indigo-500 disabled:opacity-50"
+                disabled={installingDbPack}
+                onclick={handleRemoveDbPack}
+                class="inline-flex items-center gap-1 rounded-lg border border-red-800/60 px-2.5 py-1.5 text-xs text-red-300 hover:bg-red-950/40 disabled:opacity-50"
               >
-                <Download class="h-3.5 w-3.5" />
-                {downloadingPackId === pack.id ? "Đang tải & import..." : "Tải & Cài đặt"}
+                <Trash2 class="h-3.5 w-3.5" />
+                Gỡ
               </button>
-            </div>
-          {/each}
+            {/if}
+          </div>
         </div>
+        {#if packInfo?.installed}
+          <p class="mt-2 text-[11px] text-zinc-300">
+            {packInfo.wordCount.toLocaleString()} từ gốc · {packInfo.senseCount.toLocaleString()}
+            nghĩa · {packInfo.formCount.toLocaleString()} biến thể hình thái
+          </p>
+          {#if packInfo.attribution}
+            <p class="mt-1 text-[10px] text-zinc-400">{packInfo.attribution}</p>
+          {/if}
+        {:else}
+          <p class="mt-1.5 text-[11px] text-zinc-400">
+            Chọn file <code class="text-indigo-300">dict-modern.db</code> hoặc
+            <code class="text-indigo-300">dict-full.db</code> được build từ
+            <code class="text-zinc-300">scripts/dict-builder/</code> (hỗ trợ tra biến thể từ & tìm kiếm
+            FTS5 độc lập).
+          </p>
+        {/if}
       </div>
 
       <div class="border-t border-zinc-800 pt-3">
@@ -263,27 +310,6 @@
     </button>
   </form>
 
-  {#if progress}
-    {@const pct =
-      progress.total > 0 ? Math.min(100, Math.round((progress.current / progress.total) * 100)) : 0}
-    <div class="space-y-2 rounded-xl border border-indigo-500/30 bg-indigo-500/10 p-3.5 text-xs">
-      <div class="flex items-center justify-between text-indigo-200">
-        <span>{progress.message}</span>
-        {#if progress.total > 0}
-          <span class="font-mono font-semibold">{pct}%</span>
-        {/if}
-      </div>
-      <div class="h-1.5 w-full overflow-hidden rounded-full bg-zinc-800">
-        <div
-          class="h-full rounded-full bg-indigo-500 transition-all duration-200 {progress.total === 0
-            ? 'w-1/3 animate-pulse'
-            : ''}"
-          style={progress.total > 0 ? `width: ${pct}%` : ""}
-        ></div>
-      </div>
-    </div>
-  {/if}
-
   {#if statusMsg}
     <p class="rounded-xl bg-emerald-500/10 px-3.5 py-2 text-xs text-emerald-400">{statusMsg}</p>
   {/if}
@@ -296,27 +322,104 @@
       <div
         class="flex items-start justify-between gap-4 rounded-2xl border border-zinc-800/80 bg-zinc-900/60 p-4"
       >
-        <div class="space-y-1">
+        <div class="min-w-0 flex-1 space-y-2">
           <div class="flex flex-wrap items-center gap-2">
             <span class="text-base font-bold text-white">{entry.word}</span>
-            {#if entry.ipa}
+            {#if entry.matchedForm}
+              <span class="rounded bg-amber-500/15 px-1.5 py-0.5 text-[11px] text-amber-300">
+                ← {entry.matchedForm}
+              </span>
+            {/if}
+            {#if entry.ipaUs}
+              <span class="font-mono text-xs text-indigo-400">US {entry.ipaUs}</span>
+            {/if}
+            {#if entry.ipaUk && entry.ipaUk !== entry.ipaUs}
+              <span class="font-mono text-xs text-sky-400">UK {entry.ipaUk}</span>
+            {:else if !entry.ipaUs && entry.ipa}
               <span class="font-mono text-xs text-indigo-400">{entry.ipa}</span>
             {/if}
-            {#if entry.pos}
-              <span class="rounded bg-zinc-800 px-1.5 py-0.5 text-[11px] text-zinc-400"
-                >{entry.pos}</span
-              >
+            {#if entry.variants.length > 0}
+              <span class="text-[11px] text-zinc-400">
+                (biến thể: {entry.variants.join(", ")})
+              </span>
             {/if}
-            <span class="rounded bg-zinc-800/70 px-1.5 py-0.5 text-[10px] text-zinc-500"
-              >{entry.source}</span
-            >
+            {#if entry.sources.length > 0}
+              {#each entry.sources as src}
+                <span class="rounded bg-zinc-800/80 px-1.5 py-0.5 text-[10px] text-zinc-400">
+                  {src}
+                </span>
+              {/each}
+            {:else}
+              <span class="rounded bg-zinc-800/70 px-1.5 py-0.5 text-[10px] text-zinc-500">
+                {entry.source}
+              </span>
+            {/if}
           </div>
-          <p class="text-sm text-emerald-400">{entry.meaningVi ?? entry.meaningEn ?? "—"}</p>
-          {#if entry.meaningVi && entry.meaningEn}
-            <p class="text-xs text-zinc-400">{entry.meaningEn}</p>
-          {/if}
-          {#if entry.exampleSentence}
-            <p class="text-xs text-zinc-400 italic">"{entry.exampleSentence}"</p>
+
+          {#if entry.senses.length > 0}
+            <div class="space-y-2 pt-0.5">
+              {#each entry.senses as sense}
+                <div class="space-y-1 border-l-2 border-zinc-800 pl-3">
+                  <div class="flex flex-wrap items-center gap-1.5">
+                    <span
+                      class="rounded bg-indigo-500/15 px-1.5 py-0.5 text-[10px] font-medium text-indigo-300"
+                    >
+                      {sense.pos}
+                    </span>
+                    {#each sense.tags as tag}
+                      <span class="rounded bg-zinc-800 px-1.5 py-0.5 text-[10px] text-zinc-400">
+                        {tag}
+                      </span>
+                    {/each}
+                  </div>
+                  {#if sense.definitionVi}
+                    <p class="text-sm text-emerald-400">{sense.definitionVi}</p>
+                  {/if}
+                  {#if sense.definitionEn}
+                    <p class="text-xs text-zinc-300">{sense.definitionEn}</p>
+                  {/if}
+                  {#each sense.examples as ex}
+                    <p class="text-xs text-zinc-400 italic">"{ex}"</p>
+                  {/each}
+                  {#if sense.synonyms.length > 0 || sense.antonyms.length > 0}
+                    <div class="flex flex-wrap items-center gap-1.5 pt-0.5 text-[11px]">
+                      {#if sense.synonyms.length > 0}
+                        <span class="text-zinc-500">Đồng nghĩa:</span>
+                        {#each sense.synonyms as syn}
+                          <button
+                            type="button"
+                            onclick={() => handleQuickSearch(syn)}
+                            class="rounded bg-zinc-800/80 px-1.5 py-0.5 text-indigo-300 hover:bg-indigo-500/20"
+                          >
+                            {syn}
+                          </button>
+                        {/each}
+                      {/if}
+                      {#if sense.antonyms.length > 0}
+                        <span class="ml-1 text-zinc-500">Trái nghĩa:</span>
+                        {#each sense.antonyms as ant}
+                          <button
+                            type="button"
+                            onclick={() => handleQuickSearch(ant)}
+                            class="rounded bg-zinc-800/80 px-1.5 py-0.5 text-rose-300 hover:bg-rose-500/20"
+                          >
+                            {ant}
+                          </button>
+                        {/each}
+                      {/if}
+                    </div>
+                  {/if}
+                </div>
+              {/each}
+            </div>
+          {:else}
+            <p class="text-sm text-emerald-400">{entry.meaningVi ?? entry.meaningEn ?? "—"}</p>
+            {#if entry.meaningVi && entry.meaningEn}
+              <p class="text-xs text-zinc-400">{entry.meaningEn}</p>
+            {/if}
+            {#if entry.exampleSentence}
+              <p class="text-xs text-zinc-400 italic">"{entry.exampleSentence}"</p>
+            {/if}
           {/if}
         </div>
 

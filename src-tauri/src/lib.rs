@@ -26,6 +26,8 @@ pub fn run() {
         .setup(|app| {
             let db_state = db::init_db(app.handle())?;
             app.manage(db_state);
+            let dict_pack_state = db::init_dict_pack_db(app.handle())?;
+            app.manage(dict_pack_state);
             desktop::setup_desktop_features(app.handle())?;
             Ok(())
         })
@@ -45,8 +47,11 @@ pub fn run() {
             dict_cmd::search_dictionary,
             dict_cmd::get_dictionary_count,
             dict_cmd::import_dictionary_tsv,
-            dict_cmd::list_dictionary_packs,
-            dict_cmd::download_and_import_pack,
+            dict_cmd::get_dict_pack_info,
+            dict_cmd::begin_dict_pack_install,
+            dict_cmd::append_dict_pack_chunk,
+            dict_cmd::finish_dict_pack_install,
+            dict_cmd::remove_dict_pack,
             dict_cmd::fetch_collocations,
             media_cmd::fetch_audio,
             desktop::read_clipboard_text,

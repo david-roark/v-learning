@@ -650,10 +650,24 @@
       <div class="space-y-3 border-t border-zinc-800 pt-3">
         <div class="flex items-center justify-between">
           <div>
-            <p class="text-lg font-bold text-white">{lookupResult.word}</p>
-            {#if lookupResult.ipa}
-              <p class="font-mono text-xs text-indigo-400">{lookupResult.ipa}</p>
-            {/if}
+            <div class="flex flex-wrap items-center gap-1.5">
+              <p class="text-lg font-bold text-white">{lookupResult.word}</p>
+              {#if lookupResult.matchedForm}
+                <span class="rounded bg-amber-500/15 px-1.5 py-0.5 text-[10px] text-amber-300">
+                  ← {lookupResult.matchedForm}
+                </span>
+              {/if}
+            </div>
+            <div class="flex flex-wrap gap-2 font-mono text-xs">
+              {#if lookupResult.ipaUs}
+                <span class="text-indigo-400">US {lookupResult.ipaUs}</span>
+              {/if}
+              {#if lookupResult.ipaUk && lookupResult.ipaUk !== lookupResult.ipaUs}
+                <span class="text-sky-400">UK {lookupResult.ipaUk}</span>
+              {:else if !lookupResult.ipaUs && lookupResult.ipa}
+                <span class="text-indigo-400">{lookupResult.ipa}</span>
+              {/if}
+            </div>
           </div>
           <button
             type="button"
@@ -664,9 +678,39 @@
           </button>
         </div>
 
-        <p class="text-sm text-emerald-400">
-          {lookupResult.meaningVi ?? lookupResult.meaningEn ?? "Chưa có nghĩa"}
-        </p>
+        {#if lookupResult.senses.length > 0}
+          <div class="max-h-56 space-y-2 overflow-y-auto pr-1">
+            {#each lookupResult.senses as sense}
+              <div class="space-y-0.5 border-l-2 border-zinc-800 pl-2.5 text-xs">
+                <div class="flex flex-wrap items-center gap-1">
+                  <span class="rounded bg-indigo-500/15 px-1 py-0.5 text-[10px] text-indigo-300">
+                    {sense.pos}
+                  </span>
+                  {#each sense.tags as tag}
+                    <span class="rounded bg-zinc-800 px-1 py-0.5 text-[10px] text-zinc-400">
+                      {tag}
+                    </span>
+                  {/each}
+                </div>
+                {#if sense.definitionVi}
+                  <p class="text-emerald-400">{sense.definitionVi}</p>
+                {/if}
+                {#if sense.definitionEn}
+                  <p class="text-zinc-300">{sense.definitionEn}</p>
+                {/if}
+                {#if sense.synonyms.length > 0}
+                  <p class="text-[11px] text-zinc-400">
+                    Đồng nghĩa: {sense.synonyms.join(", ")}
+                  </p>
+                {/if}
+              </div>
+            {/each}
+          </div>
+        {:else}
+          <p class="text-sm text-emerald-400">
+            {lookupResult.meaningVi ?? lookupResult.meaningEn ?? "Chưa có nghĩa"}
+          </p>
+        {/if}
 
         <div>
           <label class="mb-1 block text-[11px] text-zinc-400" for="reader-context">

@@ -15,3 +15,9 @@ vite.config.ts.timestamp-*
 *.sqlite3
 *.db-wal
 *.db-shm
+*.db.zst
+
+# Dictionary builder artifacts
+scripts/dict-builder/cache/
+scripts/dict-builder/dist/
+scripts/dict-builder/__pycache__/

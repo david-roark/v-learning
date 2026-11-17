@@ -1,6 +1,7 @@
 pub mod analytics_repo;
 pub mod card_repo;
 pub mod deck_repo;
+pub mod dict_pack_repo;
 pub mod dict_repo;
 pub mod migrations;
 pub mod note_repo;
@@ -34,6 +35,18 @@ pub fn init_db(app: &AppHandle) -> AppResult<DbState> {
 
     migrations::run_migrations(&conn)?;
     Ok(DbState(Mutex::new(conn)))
+}
+
+pub fn init_dict_pack_db(app: &AppHandle) -> AppResult<dict_pack_repo::DictPackState> {
+    let app_dir = app
+        .path()
+        .app_data_dir()
+        .map_err(|e| AppError::Internal(e.to_string()))?;
+    fs::create_dir_all(&app_dir).map_err(|e| AppError::Internal(e.to_string()))?;
+
+    let pack_path = app_dir.join("dict.db");
+    let conn = dict_pack_repo::open_pack_readonly(&pack_path)?;
+    Ok(dict_pack_repo::DictPackState(Mutex::new(conn)))
 }
 
 #[cfg(test)]

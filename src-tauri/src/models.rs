@@ -118,18 +118,36 @@ pub struct DailyStats {
     pub due_remaining: i64,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct DictionarySense {
+    pub pos: String,
+    pub definition_en: Option<String>,
+    pub definition_vi: Option<String>,
+    pub examples: Vec<String>,
+    pub tags: Vec<String>,
+    pub synonyms: Vec<String>,
+    pub antonyms: Vec<String>,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DictionaryEntry {
     pub id: i64,
     pub word: String,
     pub ipa: Option<String>,
+    pub ipa_us: Option<String>,
+    pub ipa_uk: Option<String>,
     pub pos: Option<String>,
     pub meaning_vi: Option<String>,
     pub meaning_en: Option<String>,
     pub example_sentence: Option<String>,
     pub audio_url: Option<String>,
     pub source: String,
+    pub matched_form: Option<String>,
+    pub variants: Vec<String>,
+    pub sources: Vec<String>,
+    pub senses: Vec<DictionarySense>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
