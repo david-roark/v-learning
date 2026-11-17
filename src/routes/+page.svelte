@@ -1,6 +1,7 @@
 <script lang="ts">
   import { Flame, Layers, Plus, Sparkles, Upload } from "@lucide/svelte";
   import { onMount } from "svelte";
+  import AboutModal from "$lib/features/about/AboutModal.svelte";
   import AiSettingsModal from "$lib/features/ai-practice/AiSettingsModal.svelte";
   import AnalyticsView from "$lib/features/analytics/AnalyticsView.svelte";
   import AppearanceModal from "$lib/features/appearance/AppearanceModal.svelte";
@@ -31,6 +32,7 @@
   let showSyncModal = $state(false);
   let showAppearance = $state(false);
   let showTtsSettings = $state(false);
+  let showAbout = $state(false);
   let addCardTarget = $state<DeckWithStats | null>(null);
   let manageNotesTarget = $state<DeckWithStats | null>(null);
   let apkgMsg = $state("");
@@ -106,6 +108,7 @@
       onOpenTtsSettings={() => (showTtsSettings = true)}
       onOpenSync={() => (showSyncModal = true)}
       onOpenAiSettings={() => (showAiSettings = true)}
+      onOpenAbout={() => (showAbout = true)}
     />
 
     <div class="flex flex-1 flex-col overflow-hidden">
@@ -245,3 +248,5 @@
 <AppearanceModal open={showAppearance} onClose={() => (showAppearance = false)} />
 
 <TtsSettingsModal open={showTtsSettings} onClose={() => (showTtsSettings = false)} />
+
+<AboutModal open={showAbout} onClose={() => (showAbout = false)} />

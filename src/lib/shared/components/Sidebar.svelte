@@ -5,6 +5,7 @@
     BookOpenText,
     Cloud,
     Gamepad2,
+    Info,
     Layers,
     Palette,
     PanelLeftClose,
@@ -23,6 +24,7 @@
     onOpenTtsSettings: () => void;
     onOpenSync: () => void;
     onOpenAiSettings: () => void;
+    onOpenAbout: () => void;
   }
 
   let {
@@ -32,6 +34,7 @@
     onOpenTtsSettings,
     onOpenSync,
     onOpenAiSettings,
+    onOpenAbout,
   }: Props = $props();
 
   let showMobileSettings = $state(false);
@@ -201,6 +204,19 @@
           <span>Cấu hình AI</span>
         {/if}
       </button>
+      <button
+        type="button"
+        onclick={onOpenAbout}
+        title={collapsed ? "Giới thiệu (About)" : undefined}
+        class="flex w-full items-center gap-2.5 rounded-xl py-2 text-xs text-zinc-400 transition hover:bg-zinc-800/70 hover:text-zinc-100 {collapsed
+          ? 'justify-center px-0'
+          : 'px-3'}"
+      >
+        <Info class="h-4 w-4 shrink-0" />
+        {#if !collapsed}
+          <span>Giới thiệu</span>
+        {/if}
+      </button>
     </div>
   </div>
 </aside>
@@ -253,6 +269,17 @@
     >
       <Settings class="h-4 w-4 text-indigo-400" />
       Cấu hình AI
+    </button>
+    <button
+      type="button"
+      onclick={() => {
+        showMobileSettings = false;
+        onOpenAbout();
+      }}
+      class="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-xs text-zinc-200 hover:bg-zinc-800"
+    >
+      <Info class="h-4 w-4 text-indigo-400" />
+      Giới thiệu (About)
     </button>
   </div>
 {/if}
