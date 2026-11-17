@@ -1,0 +1,88 @@
+name: Build Android APK
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: Android target architecture
+        type: choice
+        options:
+          - aarch64
+          - all
+        default: aarch64
+        required: true
+      debug:
+        description: Build debug APK (faster, unsigned-ready for testing)
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+jobs:
+  android:
+    name: Build Android (${{ inputs.target }})
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          cache: "npm"
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Setup Rust toolchain (Android targets)
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android,armv7-linux-androideabi,i686-linux-android,x86_64-linux-android
+
+      - name: Cache Cargo dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Configure Android SDK & NDK env
+        run: |
+          ndk_dir="${ANDROID_NDK_HOME:-}"
+          if [ -z "$ndk_dir" ] || [ ! -d "$ndk_dir" ]; then
+            ndk_dir="$(ls -d "${ANDROID_HOME}/ndk/"* | sort -V | tail -n 1)"
+          fi
+          echo "NDK_HOME=$ndk_dir" >> "$GITHUB_ENV"
+          echo "ANDROID_NDK_HOME=$ndk_dir" >> "$GITHUB_ENV"
+
+      - name: Install npm dependencies
+        run: npm ci
+
+      - name: Initialize Tauri Android project
+        run: |
+          if [ ! -d "src-tauri/gen/android" ]; then
+            npx tauri android init
+          fi
+
+      - name: Build Android APK
+        run: |
+          args=(--apk)
+          if [ "${{ inputs.debug }}" = "true" ]; then
+            args+=(--debug)
+          fi
+          if [ "${{ inputs.target }}" != "all" ]; then
+            args+=(--target "${{ inputs.target }}")
+          fi
+          npx tauri android build "${args[@]}"
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: v-learning-android-${{ inputs.target }}
+          path: src-tauri/gen/android/app/build/outputs/apk/**/*.apk
+          if-no-files-found: error
+          retention-days: 14
