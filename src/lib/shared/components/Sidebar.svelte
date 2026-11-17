@@ -7,9 +7,12 @@
     Gamepad2,
     Layers,
     Palette,
+    PanelLeftClose,
+    PanelLeftOpen,
     Settings,
     Volume2,
   } from "@lucide/svelte";
+  import { onMount } from "svelte";
 
   export type NavTab = "decks" | "dictionary" | "reader" | "games" | "analytics";
 
@@ -32,6 +35,22 @@
   }: Props = $props();
 
   let showMobileSettings = $state(false);
+  let collapsed = $state(false);
+
+  const COLLAPSE_KEY = "vlearning_sidebar_collapsed";
+
+  function toggleCollapsed() {
+    collapsed = !collapsed;
+    if (typeof localStorage !== "undefined") {
+      localStorage.setItem(COLLAPSE_KEY, collapsed ? "1" : "0");
+    }
+  }
+
+  onMount(() => {
+    if (typeof localStorage !== "undefined") {
+      collapsed = localStorage.getItem(COLLAPSE_KEY) === "1";
+    }
+  });
 
   const navItems: Array<{ id: NavTab; label: string; shortcut: string; icon: typeof Layers }> = [
     { id: "decks", label: "Bộ thẻ", shortcut: "1", icon: Layers },
@@ -43,20 +62,42 @@
 </script>
 
 <aside
-  class="hidden h-full w-56 shrink-0 flex-col justify-between border-r border-zinc-800 bg-zinc-900/50 p-3.5 select-none md:flex"
+  class="hidden h-full shrink-0 flex-col justify-between border-r border-zinc-800 bg-zinc-900/50 select-none transition-all duration-200 md:flex {collapsed
+    ? 'w-16 p-2.5'
+    : 'w-56 p-3.5'}"
 >
-  <div class="space-y-6">
-    <!-- Brand -->
-    <div class="flex items-center gap-2.5 px-2 pt-1">
-      <img
-        src="/logo.png"
-        alt="V-Learning"
-        class="h-8 w-8 rounded-xl shadow-md shadow-indigo-600/20"
-      />
-      <div>
-        <h1 class="text-sm font-bold tracking-tight text-white">V-Learning</h1>
-        <p class="text-[10px] text-zinc-400">FSRS · Offline-first</p>
+  <div class="space-y-5">
+    <!-- Brand + Collapse Toggle -->
+    <div
+      class="flex items-center pt-1 {collapsed ? 'flex-col gap-2' : 'justify-between gap-2 px-1.5'}"
+    >
+      <div class="flex min-w-0 items-center gap-2.5">
+        <img
+          src="/logo.png"
+          alt="V-Learning"
+          class="h-8 w-8 shrink-0 rounded-xl shadow-md shadow-indigo-600/20"
+        />
+        {#if !collapsed}
+          <div class="min-w-0">
+            <h1 class="truncate text-sm font-bold tracking-tight text-white">V-Learning</h1>
+            <p class="truncate text-[10px] text-zinc-400">FSRS · Offline-first</p>
+          </div>
+        {/if}
       </div>
+
+      <button
+        type="button"
+        onclick={toggleCollapsed}
+        title={collapsed ? "Mở rộng thanh điều hướng" : "Thu gọn thanh điều hướng"}
+        aria-label={collapsed ? "Mở rộng thanh điều hướng" : "Thu gọn thanh điều hướng"}
+        class="shrink-0 rounded-lg p-1.5 text-zinc-400 transition hover:bg-zinc-800 hover:text-zinc-100"
+      >
+        {#if collapsed}
+          <PanelLeftOpen class="h-4 w-4" />
+        {:else}
+          <PanelLeftClose class="h-4 w-4" />
+        {/if}
+      </button>
     </div>
 
     <!-- Navigation -->
@@ -67,21 +108,28 @@
         <button
           type="button"
           onclick={() => onSelectTab(item.id)}
-          class="flex w-full items-center justify-between rounded-xl px-3 py-2 text-xs font-medium transition {active
+          title={collapsed ? `${item.label} (Ctrl+${item.shortcut})` : undefined}
+          class="flex w-full items-center rounded-xl py-2 text-xs font-medium transition {collapsed
+            ? 'justify-center px-0'
+            : 'justify-between px-3'} {active
             ? 'bg-indigo-600 text-white shadow-sm'
             : 'text-zinc-400 hover:bg-zinc-800/70 hover:text-zinc-100'}"
         >
           <span class="flex items-center gap-2.5">
-            <Icon class="h-4 w-4" />
-            {item.label}
+            <Icon class="h-4 w-4 shrink-0" />
+            {#if !collapsed}
+              <span>{item.label}</span>
+            {/if}
           </span>
-          <kbd
-            class="rounded px-1.5 py-0.5 font-mono text-[10px] {active
-              ? 'bg-black/20 text-white/80'
-              : 'bg-zinc-800 text-zinc-500'}"
-          >
-            ^{item.shortcut}
-          </kbd>
+          {#if !collapsed}
+            <kbd
+              class="rounded px-1.5 py-0.5 font-mono text-[10px] {active
+                ? 'bg-black/20 text-white/80'
+                : 'bg-zinc-800 text-zinc-500'}"
+            >
+              ^{item.shortcut}
+            </kbd>
+          {/if}
         </button>
       {/each}
     </nav>
@@ -89,47 +137,69 @@
 
   <!-- Bottom Utilities -->
   <div class="space-y-2.5 border-t border-zinc-800 pt-3">
-    <div class="rounded-xl bg-zinc-950/60 px-3 py-2 text-[11px] text-zinc-400">
-      <span class="block font-medium text-zinc-300">Tra từ nhanh mọi nơi</span>
-      <kbd
-        class="mt-1 inline-block rounded bg-zinc-800 px-1.5 py-0.5 font-mono text-[10px] text-zinc-300"
-      >
-        Ctrl+Shift+D
-      </kbd>
-    </div>
+    {#if !collapsed}
+      <div class="rounded-xl bg-zinc-950/60 px-3 py-2 text-[11px] text-zinc-400">
+        <span class="block font-medium text-zinc-300">Tra từ nhanh mọi nơi</span>
+        <kbd
+          class="mt-1 inline-block rounded bg-zinc-800 px-1.5 py-0.5 font-mono text-[10px] text-zinc-300"
+        >
+          Ctrl+Shift+D
+        </kbd>
+      </div>
+    {/if}
 
     <div class="space-y-0.5">
       <button
         type="button"
         onclick={onOpenAppearance}
-        class="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-xs text-zinc-400 transition hover:bg-zinc-800/70 hover:text-zinc-100"
+        title={collapsed ? "Giao diện & Font" : undefined}
+        class="flex w-full items-center gap-2.5 rounded-xl py-2 text-xs text-zinc-400 transition hover:bg-zinc-800/70 hover:text-zinc-100 {collapsed
+          ? 'justify-center px-0'
+          : 'px-3'}"
       >
-        <Palette class="h-4 w-4" />
-        Giao diện & Font
+        <Palette class="h-4 w-4 shrink-0" />
+        {#if !collapsed}
+          <span>Giao diện & Font</span>
+        {/if}
       </button>
       <button
         type="button"
         onclick={onOpenTtsSettings}
-        class="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-xs text-zinc-400 transition hover:bg-zinc-800/70 hover:text-zinc-100"
+        title={collapsed ? "Phát âm (TTS)" : undefined}
+        class="flex w-full items-center gap-2.5 rounded-xl py-2 text-xs text-zinc-400 transition hover:bg-zinc-800/70 hover:text-zinc-100 {collapsed
+          ? 'justify-center px-0'
+          : 'px-3'}"
       >
-        <Volume2 class="h-4 w-4" />
-        Phát âm (TTS)
+        <Volume2 class="h-4 w-4 shrink-0" />
+        {#if !collapsed}
+          <span>Phát âm (TTS)</span>
+        {/if}
       </button>
       <button
         type="button"
         onclick={onOpenSync}
-        class="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-xs text-zinc-400 transition hover:bg-zinc-800/70 hover:text-zinc-100"
+        title={collapsed ? "Sao lưu & Sync" : undefined}
+        class="flex w-full items-center gap-2.5 rounded-xl py-2 text-xs text-zinc-400 transition hover:bg-zinc-800/70 hover:text-zinc-100 {collapsed
+          ? 'justify-center px-0'
+          : 'px-3'}"
       >
-        <Cloud class="h-4 w-4" />
-        Sao lưu & Sync
+        <Cloud class="h-4 w-4 shrink-0" />
+        {#if !collapsed}
+          <span>Sao lưu & Sync</span>
+        {/if}
       </button>
       <button
         type="button"
         onclick={onOpenAiSettings}
-        class="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-xs text-zinc-400 transition hover:bg-zinc-800/70 hover:text-zinc-100"
+        title={collapsed ? "Cấu hình AI" : undefined}
+        class="flex w-full items-center gap-2.5 rounded-xl py-2 text-xs text-zinc-400 transition hover:bg-zinc-800/70 hover:text-zinc-100 {collapsed
+          ? 'justify-center px-0'
+          : 'px-3'}"
       >
-        <Settings class="h-4 w-4" />
-        Cấu hình AI
+        <Settings class="h-4 w-4 shrink-0" />
+        {#if !collapsed}
+          <span>Cấu hình AI</span>
+        {/if}
       </button>
     </div>
   </div>
