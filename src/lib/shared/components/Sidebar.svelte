@@ -34,7 +34,7 @@
   const navItems: Array<{ id: NavTab; label: string; shortcut: string; icon: typeof Layers }> = [
     { id: "decks", label: "Bộ thẻ", shortcut: "1", icon: Layers },
     { id: "dictionary", label: "Từ điển", shortcut: "2", icon: BookA },
-    { id: "reader", label: "Đọc & Khai thác", shortcut: "3", icon: BookOpenText },
+    { id: "reader", label: "Đọc & Xem", shortcut: "3", icon: BookOpenText },
     { id: "analytics", label: "Thống kê", shortcut: "4", icon: BarChart3 },
   ];
 </script>

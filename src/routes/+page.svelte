@@ -37,7 +37,7 @@
   const TAB_TITLES: Record<NavTab, string> = {
     decks: "Bộ thẻ của bạn",
     dictionary: "Từ điển Offline & Online",
-    reader: "Trình đọc & Khai thác câu",
+    reader: "Đọc báo, Sách & Video",
     analytics: "Thống kê học tập",
   };
 
