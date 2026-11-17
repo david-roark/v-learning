@@ -76,6 +76,8 @@ jobs:
           if [ ! -d "src-tauri/gen/android" ]; then
             npx tauri android init
           fi
+          rm -rf src-tauri/gen/android/app/src/main/res/mipmap-*
+          cp -rf src-tauri/icons/android/* src-tauri/gen/android/app/src/main/res/
 
       - name: Build Android APK
         run: |
