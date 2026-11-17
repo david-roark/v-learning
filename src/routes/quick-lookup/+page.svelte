@@ -1,5 +1,6 @@
 <script lang="ts">
   import { Plus, Search, Volume2 } from "@lucide/svelte";
+  import { listen } from "@tauri-apps/api/event";
   import { onMount } from "svelte";
   import { notesApi } from "$lib/features/card-editor/api";
   import { decksApi } from "$lib/features/decks/api";
@@ -51,20 +52,35 @@
     }
   }
 
-  onMount(async () => {
+  async function refreshOnOpen() {
     inputEl?.focus();
     decks = await decksApi.list();
-    if (decks.length > 0) selectedDeckId = decks[0].id;
+    if (decks.length > 0 && !decks.some((d) => d.id === selectedDeckId)) {
+      selectedDeckId = decks[0].id;
+    }
 
     try {
       const clip = (await invokeCmd<string>("read_clipboard_text")).trim();
-      if (clip && clip.length <= 80 && !clip.includes("\n")) {
+      if (clip && clip.length <= 80 && !clip.includes("\n") && clip !== query) {
         query = clip;
         await handleLookup();
       }
     } catch {
       // ignore clipboard errors
     }
+  }
+
+  onMount(() => {
+    void refreshOnOpen();
+    let unlisten: (() => void) | null = null;
+    void listen("quick-lookup-opened", () => {
+      void refreshOnOpen();
+    }).then((fn) => {
+      unlisten = fn;
+    });
+    return () => {
+      unlisten?.();
+    };
   });
 </script>
 

@@ -108,6 +108,13 @@
 
   function handleKeydown(e: KeyboardEvent) {
     if (editingNote || showAiPractice || loading) return;
+    if (
+      e.target instanceof HTMLInputElement ||
+      e.target instanceof HTMLTextAreaElement ||
+      (e.target instanceof HTMLElement && e.target.isContentEditable)
+    ) {
+      return;
+    }
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") {
       e.preventDefault();
       void handleUndo();
@@ -253,31 +260,34 @@
       </div>
     </div>
   {:else}
-    {#if dictationMode}
-      <DictationPanel
-        targetText={currentCard.note.exampleSentence || currentCard.note.word}
-        onPlay={() => speakText(currentCard.note.exampleSentence || currentCard.note.word)}
-        onChecked={() => (revealed = true)}
-      />
-    {:else}
-      <FlashcardView note={currentCard.note} {revealed} onSpeak={speakText} />
-    {/if}
+    {#key currentCard.card.id}
+      {#if dictationMode}
+        <DictationPanel
+          targetText={currentCard.note.exampleSentence || currentCard.note.word}
+          onPlay={() => speakText(currentCard.note.exampleSentence || currentCard.note.word)}
+          onChecked={() => (revealed = true)}
+        />
+      {:else}
+        <FlashcardView note={currentCard.note} {revealed} onSpeak={speakText} />
+      {/if}
 
-    {#if !revealed && !dictationMode}
-      <button
-        type="button"
-        onclick={() => (revealed = true)}
-        class="w-full rounded-2xl bg-indigo-600 py-3.5 text-sm font-semibold text-white transition hover:bg-indigo-500"
-      >
-        Hiện đáp án <span class="ml-2 rounded bg-black/25 px-2 py-0.5 font-mono text-xs">Space</span
+      {#if !revealed && !dictationMode}
+        <button
+          type="button"
+          onclick={() => (revealed = true)}
+          class="w-full rounded-2xl bg-indigo-600 py-3.5 text-sm font-semibold text-white transition hover:bg-indigo-500"
         >
-      </button>
-    {:else}
-      <ShadowingBar
-        onPlaySample={() => speakText(currentCard.note.exampleSentence || currentCard.note.word)}
-      />
-      <RatingBar intervals={currentCard.intervals} {submitting} onRate={handleRate} />
-    {/if}
+          Hiện đáp án <span class="ml-2 rounded bg-black/25 px-2 py-0.5 font-mono text-xs"
+            >Space</span
+          >
+        </button>
+      {:else}
+        <ShadowingBar
+          onPlaySample={() => speakText(currentCard.note.exampleSentence || currentCard.note.word)}
+        />
+        <RatingBar intervals={currentCard.intervals} {submitting} onRate={handleRate} />
+      {/if}
+    {/key}
 
     <p class="text-center text-xs text-zinc-500">
       Phím tắt: <kbd class="rounded bg-zinc-800 px-1.5 py-0.5">Space</kbd> lật thẻ ·

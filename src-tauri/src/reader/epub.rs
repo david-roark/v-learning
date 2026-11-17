@@ -93,6 +93,55 @@ fn extract_attr(tag: &str, attr: &str) -> Option<String> {
     None
 }
 
+fn percent_decode_path(input: &str) -> String {
+    let bytes = input.as_bytes();
+    let mut out = Vec::with_capacity(bytes.len());
+    let mut i = 0;
+    while i < bytes.len() {
+        if bytes[i] == b'%'
+            && i + 2 < bytes.len()
+            && let (Some(h), Some(l)) = (
+                (bytes[i + 1] as char).to_digit(16),
+                (bytes[i + 2] as char).to_digit(16),
+            )
+        {
+            out.push(((h << 4) | l) as u8);
+            i += 3;
+            continue;
+        }
+        out.push(bytes[i]);
+        i += 1;
+    }
+    String::from_utf8_lossy(&out).into_owned()
+}
+
+fn normalize_zip_path(base_dir: &str, href: &str) -> String {
+    let decoded = percent_decode_path(href);
+    let clean_href = decoded.split('#').next().unwrap_or(&decoded);
+    let combined = if base_dir.is_empty() {
+        clean_href.to_string()
+    } else {
+        format!("{base_dir}/{clean_href}")
+    };
+    let mut parts: Vec<&str> = Vec::new();
+    for seg in combined.split('/') {
+        match seg {
+            "" | "." => {}
+            ".." => {
+                parts.pop();
+            }
+            other => parts.push(other),
+        }
+    }
+    parts.join("/")
+}
+
+fn starts_with_tag(trimmed: &str, tag: &str) -> bool {
+    trimmed
+        .strip_prefix(tag)
+        .is_some_and(|rest| rest.chars().next().is_some_and(|c| c.is_ascii_whitespace()))
+}
+
 fn parse_opf_paths(opf_xml: &str, base_dir: &str) -> (Option<String>, Vec<String>) {
     let mut title = None;
     if let (Some(s), Some(e)) = (opf_xml.find("<dc:title"), opf_xml.find("</dc:title>"))
@@ -109,18 +158,13 @@ fn parse_opf_paths(opf_xml: &str, base_dir: &str) -> (Option<String>, Vec<String
 
     for segment in opf_xml.split('<') {
         let trimmed = segment.trim();
-        if trimmed.starts_with("item ") {
+        if starts_with_tag(trimmed, "item") {
             if let (Some(id), Some(href)) =
                 (extract_attr(trimmed, "id"), extract_attr(trimmed, "href"))
             {
-                let full_path = if base_dir.is_empty() {
-                    href
-                } else {
-                    format!("{base_dir}/{href}")
-                };
-                manifest.insert(id, full_path);
+                manifest.insert(id, normalize_zip_path(base_dir, &href));
             }
-        } else if trimmed.starts_with("itemref ")
+        } else if starts_with_tag(trimmed, "itemref")
             && let Some(idref) = extract_attr(trimmed, "idref")
         {
             spine_ids.push(idref);
@@ -176,14 +220,14 @@ pub fn parse_epub_bytes(bytes: &[u8]) -> AppResult<EpubBook> {
     }
 
     let mut chapters = Vec::new();
-    for (idx, path) in chapter_paths.iter().enumerate() {
+    for path in &chapter_paths {
         if let Ok(mut file) = archive.by_name(path) {
             let mut html = String::new();
             if file.read_to_string(&mut html).is_ok() {
                 let text = html_to_plain_text(&html);
                 if text.len() > 20 {
                     chapters.push(EpubChapter {
-                        title: format!("Chương {}", idx + 1),
+                        title: format!("Chương {}", chapters.len() + 1),
                         text,
                     });
                 }
@@ -241,5 +285,46 @@ mod tests {
         assert_eq!(book.title, "Test English Book");
         assert_eq!(book.chapters.len(), 1);
         assert!(book.chapters[0].text.contains("Smartphones are ubiquitous"));
+    }
+
+    #[test]
+    fn parse_epub_handles_multiline_manifest_encoded_href_and_sequential_numbering() {
+        let mut buf = Cursor::new(Vec::new());
+        {
+            let mut zip = zip::ZipWriter::new(&mut buf);
+            zip.start_file("META-INF/container.xml", SimpleFileOptions::default())
+                .unwrap();
+            zip.write_all(
+                br#"<?xml version="1.0"?><container><rootfiles><rootfile full-path="OEBPS/content.opf"/></rootfiles></container>"#,
+            )
+            .unwrap();
+
+            zip.start_file("OEBPS/content.opf", SimpleFileOptions::default())
+                .unwrap();
+            zip.write_all(
+                br#"<package><metadata><dc:title>Encoded Book</dc:title></metadata><manifest><item
+                    id="cover" href="cover.xhtml"/><item
+                    id="ch1" href="./chapter%201.xhtml"/></manifest><spine><itemref idref="cover"/><itemref
+                    idref="ch1"/></spine></package>"#,
+            )
+            .unwrap();
+
+            zip.start_file("OEBPS/cover.xhtml", SimpleFileOptions::default())
+                .unwrap();
+            zip.write_all(br#"<html><body><p>Cover</p></body></html>"#)
+                .unwrap();
+
+            zip.start_file("OEBPS/chapter 1.xhtml", SimpleFileOptions::default())
+                .unwrap();
+            zip.write_all(
+                br#"<html><body><p>Resilient learners practice every single day.</p></body></html>"#,
+            )
+            .unwrap();
+            zip.finish().unwrap();
+        }
+
+        let book = parse_epub_bytes(buf.get_ref()).expect("parse epub");
+        assert_eq!(book.chapters.len(), 1);
+        assert_eq!(book.chapters[0].title, "Chương 1");
     }
 }

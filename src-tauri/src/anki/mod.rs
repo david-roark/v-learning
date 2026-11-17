@@ -10,20 +10,29 @@ use crate::error::{AppError, AppResult};
 use crate::models::{ApkgImportReport, CreateDeckInput, CreateNoteInput};
 
 fn strip_html_and_sound(input: &str) -> String {
-    let mut out = String::with_capacity(input.len());
-    let mut in_tag = false;
-    let mut in_bracket = false;
+    // First remove [sound:...] tags without stripping legitimate [n.], [adj.], or IPA brackets
+    let mut no_sound = String::with_capacity(input.len());
+    let mut rest = input;
+    while let Some(pos) = rest.find("[sound:") {
+        no_sound.push_str(&rest[..pos]);
+        if let Some(end_rel) = rest[pos..].find(']') {
+            rest = &rest[pos + end_rel + 1..];
+        } else {
+            rest = &rest[pos + 7..];
+        }
+    }
+    no_sound.push_str(rest);
 
-    for ch in input.chars() {
+    let mut out = String::with_capacity(no_sound.len());
+    let mut in_tag = false;
+    for ch in no_sound.chars() {
         match ch {
             '<' => in_tag = true,
             '>' => {
                 in_tag = false;
                 out.push(' ');
             }
-            '[' => in_bracket = true,
-            ']' => in_bracket = false,
-            _ if !in_tag && !in_bracket => out.push(ch),
+            _ if !in_tag => out.push(ch),
             _ => {}
         }
     }
@@ -176,6 +185,14 @@ mod tests {
         assert_eq!(
             notes[0].example_sentence.as_deref(),
             Some("Fashions are ephemeral.")
+        );
+    }
+
+    #[test]
+    fn strip_html_and_sound_preserves_brackets_other_than_sound() {
+        assert_eq!(
+            strip_html_and_sound("<b>ubiquitous</b> [adj.] [sound:ubi.mp3]"),
+            "ubiquitous [adj.]"
         );
     }
 }

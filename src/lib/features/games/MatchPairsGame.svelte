@@ -24,10 +24,15 @@
   let finished = $state(false);
   let bestTimeMs = $state<number | null>(null);
   let timer: ReturnType<typeof setInterval> | null = null;
+  let wrongTimer: ReturnType<typeof setTimeout> | null = null;
   let startedAt = 0;
 
   function startRound(customNotes?: Note[]) {
     if (timer) clearInterval(timer);
+    if (wrongTimer) {
+      clearTimeout(wrongTimer);
+      wrongTimer = null;
+    }
     round = buildMatchRound(customNotes && customNotes.length >= 2 ? customNotes : notes, 6);
     matchedIds.clear();
     selectedLeftId = null;
@@ -69,7 +74,9 @@
       wrongPair = { left: leftId, right: rightId };
       selectedLeftId = null;
       selectedRightId = null;
-      setTimeout(() => {
+      if (wrongTimer) clearTimeout(wrongTimer);
+      wrongTimer = setTimeout(() => {
+        wrongTimer = null;
         wrongPair = null;
       }, 450);
     }
@@ -90,6 +97,7 @@
   onMount(() => startRound());
   onDestroy(() => {
     if (timer) clearInterval(timer);
+    if (wrongTimer) clearTimeout(wrongTimer);
   });
 </script>
 

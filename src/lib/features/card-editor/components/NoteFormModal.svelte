@@ -146,26 +146,28 @@
       </div>
 
       <form onsubmit={handleSubmit} class="space-y-3.5">
-        <div class="flex gap-2 rounded-xl bg-zinc-950 p-1">
-          <button
-            type="button"
-            onclick={() => (noteType = "vocab")}
-            class="flex-1 rounded-lg py-1.5 text-xs font-medium transition {noteType === 'vocab'
-              ? 'bg-indigo-600 text-white'
-              : 'text-zinc-400 hover:text-zinc-200'}"
-          >
-            Từ vựng (Vocabulary)
-          </button>
-          <button
-            type="button"
-            onclick={() => (noteType = "cloze")}
-            class="flex-1 rounded-lg py-1.5 text-xs font-medium transition {noteType === 'cloze'
-              ? 'bg-indigo-600 text-white'
-              : 'text-zinc-400 hover:text-zinc-200'}"
-          >
-            Điền khuyết (Cloze)
-          </button>
-        </div>
+        {#if !editNote}
+          <div class="flex gap-2 rounded-xl bg-zinc-950 p-1">
+            <button
+              type="button"
+              onclick={() => (noteType = "vocab")}
+              class="flex-1 rounded-lg py-1.5 text-xs font-medium transition {noteType === 'vocab'
+                ? 'bg-indigo-600 text-white'
+                : 'text-zinc-400 hover:text-zinc-200'}"
+            >
+              Từ vựng (Vocabulary)
+            </button>
+            <button
+              type="button"
+              onclick={() => (noteType = "cloze")}
+              class="flex-1 rounded-lg py-1.5 text-xs font-medium transition {noteType === 'cloze'
+                ? 'bg-indigo-600 text-white'
+                : 'text-zinc-400 hover:text-zinc-200'}"
+            >
+              Điền khuyết (Cloze)
+            </button>
+          </div>
+        {/if}
 
         <div class="grid grid-cols-3 gap-3">
           <div class="col-span-2">

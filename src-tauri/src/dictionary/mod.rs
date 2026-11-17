@@ -159,6 +159,20 @@ async fn translate_en_to_vi(text: &str) -> AppResult<UpsertDictionaryInput> {
     })
 }
 
+pub(crate) fn build_dictionary_url(word: &str) -> String {
+    format!(
+        "https://api.dictionaryapi.dev/api/v2/entries/en/{}",
+        percent_encode_query(&word.trim().to_lowercase())
+    )
+}
+
+pub(crate) fn build_collocations_url(word: &str) -> String {
+    format!(
+        "https://api.datamuse.com/words?rel_bga={}&max=6",
+        percent_encode_query(&word.trim().to_lowercase())
+    )
+}
+
 pub async fn fetch_online_entry(word: &str) -> AppResult<UpsertDictionaryInput> {
     let trimmed = word.trim();
     if trimmed.is_empty() {
@@ -171,10 +185,7 @@ pub async fn fetch_online_entry(word: &str) -> AppResult<UpsertDictionaryInput> 
         return translate_en_to_vi(trimmed).await;
     }
 
-    let url = format!(
-        "https://api.dictionaryapi.dev/api/v2/entries/en/{}",
-        trimmed.to_lowercase()
-    );
+    let url = build_dictionary_url(trimmed);
     let client = reqwest::Client::builder()
         .timeout(std::time::Duration::from_secs(10))
         .build()
@@ -216,7 +227,7 @@ pub async fn fetch_collocations(word: &str) -> AppResult<Vec<String>> {
         return Ok(Vec::new());
     }
 
-    let url = format!("https://api.datamuse.com/words?rel_bga={trimmed}&max=6");
+    let url = build_collocations_url(&trimmed);
     let resp = reqwest::get(&url)
         .await
         .map_err(|e| AppError::Internal(format!("Lỗi kết nối Datamuse: {e}")))?;
@@ -274,6 +285,18 @@ mod tests {
         assert_eq!(
             translated,
             "Điện thoại thông minh đã trở nên phổ biến trong cuộc sống hiện đại."
+        );
+    }
+
+    #[test]
+    fn dictionary_and_collocation_urls_percent_encode_special_chars() {
+        assert_eq!(
+            build_dictionary_url("C#"),
+            "https://api.dictionaryapi.dev/api/v2/entries/en/c%23"
+        );
+        assert_eq!(
+            build_collocations_url("make up&down"),
+            "https://api.datamuse.com/words?rel_bga=make%20up%26down&max=6"
         );
     }
 }

@@ -1,6 +1,6 @@
 <script lang="ts">
   import { Flame, RotateCcw, Trophy, Volume2 } from "@lucide/svelte";
-  import { onMount } from "svelte";
+  import { onDestroy, onMount } from "svelte";
   import { playWordAudio } from "$lib/shared/audio";
   import type { Note } from "$lib/shared/types";
   import {
@@ -27,10 +27,15 @@
   let mistakes = $state<Note[]>([]);
   let finished = $state(false);
   let bestScore = $state<number | null>(null);
+  let advanceTimer: ReturnType<typeof setTimeout> | null = null;
 
   const currentQuestion = $derived(questions[currentIndex] ?? null);
 
   function startRound(targetPool: Note[] = notes) {
+    if (advanceTimer) {
+      clearTimeout(advanceTimer);
+      advanceTimer = null;
+    }
     const built: ClozeQuestion[] = [];
     for (const n of shuffleArray(targetPool)) {
       const q = buildClozeQuestion(n, notes);
@@ -63,7 +68,9 @@
       }
     }
 
-    setTimeout(() => {
+    if (advanceTimer) clearTimeout(advanceTimer);
+    advanceTimer = setTimeout(() => {
+      advanceTimer = null;
       if (currentIndex + 1 >= questions.length) {
         finished = true;
         bestScore = saveBestScore("cloze", score, false);
@@ -86,6 +93,9 @@
   }
 
   onMount(() => startRound());
+  onDestroy(() => {
+    if (advanceTimer) clearTimeout(advanceTimer);
+  });
 </script>
 
 <svelte:window onkeydown={handleKeydown} />

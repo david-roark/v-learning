@@ -39,14 +39,45 @@ export async function speakSystemTts(text: string, speed: AudioSpeed = 1.0): Pro
   await ttsApi.speakSystem(target, speed);
 }
 
+let activeAudio: HTMLAudioElement | null = null;
+let activeAudioUrl: string | null = null;
+
+function stopActiveAudio() {
+  if (activeAudio) {
+    activeAudio.pause();
+    activeAudio.onended = null;
+    activeAudio.onerror = null;
+    activeAudio = null;
+  }
+  if (activeAudioUrl) {
+    URL.revokeObjectURL(activeAudioUrl);
+    activeAudioUrl = null;
+  }
+}
+
 export async function playAudioBytes(bytes: number[], speed: AudioSpeed = 1.0): Promise<void> {
+  stopActiveAudio();
   const blob = new Blob([new Uint8Array(bytes)], { type: "audio/mpeg" });
   const url = URL.createObjectURL(blob);
   const audio = new Audio(url);
   audio.playbackRate = speed;
-  audio.onended = () => URL.revokeObjectURL(url);
-  audio.onerror = () => URL.revokeObjectURL(url);
-  await audio.play();
+  activeAudio = audio;
+  activeAudioUrl = url;
+
+  const cleanup = () => {
+    if (activeAudio === audio) activeAudio = null;
+    if (activeAudioUrl === url) activeAudioUrl = null;
+    URL.revokeObjectURL(url);
+  };
+  audio.onended = cleanup;
+  audio.onerror = cleanup;
+
+  try {
+    await audio.play();
+  } catch (err) {
+    cleanup();
+    throw err;
+  }
 }
 
 export function speakWithTts(text: string, speed: AudioSpeed = 1.0): void {

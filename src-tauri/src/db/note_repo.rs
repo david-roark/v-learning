@@ -131,6 +131,22 @@ pub fn update_note(conn: &Connection, input: UpdateNoteInput) -> AppResult<()> {
         ));
     }
 
+    let duplicate: bool = conn.query_row(
+        "SELECT EXISTS(
+            SELECT 1 FROM notes
+            WHERE deck_id = (SELECT deck_id FROM notes WHERE id = ?1)
+              AND word = ?2 COLLATE NOCASE
+              AND id != ?1
+        )",
+        params![input.id, word],
+        |r| r.get(0),
+    )?;
+    if duplicate {
+        return Err(AppError::Validation(format!(
+            "Từ \"{word}\" đã tồn tại trong bộ thẻ này"
+        )));
+    }
+
     let now_ms = Utc::now().timestamp_millis();
     let collocations_json = serde_json::to_string(&input.collocations.unwrap_or_default())
         .unwrap_or_else(|_| "[]".into());
@@ -285,5 +301,20 @@ mod tests {
         create_note(&mut conn, make(d1.id.clone(), "Pragmatic")).expect("first");
         assert!(create_note(&mut conn, make(d1.id.clone(), "pragmatic")).is_err());
         assert!(create_note(&mut conn, make(d2.id, "pragmatic")).is_ok());
+
+        let second = create_note(&mut conn, make(d1.id, "Ephemeral")).expect("second");
+        let dup_update = update_note(
+            &conn,
+            UpdateNoteInput {
+                id: second.id.clone(),
+                word: "PRAGMATIC".into(),
+                ipa: None,
+                meaning: "thực tế".into(),
+                example_sentence: None,
+                collocations: None,
+                tags: None,
+            },
+        );
+        assert!(dup_update.is_err());
     }
 }

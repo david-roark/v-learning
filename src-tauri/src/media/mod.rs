@@ -185,24 +185,30 @@ pub fn speak_with_os_tts(text: &str, speed: f64) -> AppResult<()> {
         return Err(AppError::Validation("Không có nội dung để đọc".into()));
     }
 
+    fn reap_child(mut child: std::process::Child) {
+        std::thread::spawn(move || {
+            let _ = child.wait();
+        });
+    }
+
     #[cfg(target_os = "linux")]
     {
         // spd-say rate is -100..100 (0 is normal); espeak wpm ~175 * speed
         let spd_rate = ((speed - 1.0) * 100.0).clamp(-80.0, 80.0) as i32;
-        if std::process::Command::new("spd-say")
-            .args(["-l", "en", "-r", &spd_rate.to_string(), trimmed])
+        if let Ok(child) = std::process::Command::new("spd-say")
+            .args(["-l", "en", "-r", &spd_rate.to_string(), "--", trimmed])
             .spawn()
-            .is_ok()
         {
+            reap_child(child);
             return Ok(());
         }
         let wpm = (175.0 * speed).clamp(80.0, 320.0) as i32;
         for bin in ["espeak-ng", "espeak"] {
-            if std::process::Command::new(bin)
-                .args(["-v", "en", "-s", &wpm.to_string(), trimmed])
+            if let Ok(child) = std::process::Command::new(bin)
+                .args(["-v", "en", "-s", &wpm.to_string(), "--", trimmed])
                 .spawn()
-                .is_ok()
             {
+                reap_child(child);
                 return Ok(());
             }
         }
@@ -215,10 +221,11 @@ pub fn speak_with_os_tts(text: &str, speed: f64) -> AppResult<()> {
     #[cfg(target_os = "macos")]
     {
         let wpm = (180.0 * speed).clamp(90.0, 320.0) as i32;
-        std::process::Command::new("say")
+        let child = std::process::Command::new("say")
             .args(["-r", &wpm.to_string(), trimmed])
             .spawn()
             .map_err(|e| AppError::Internal(format!("Lỗi gọi giọng máy macOS: {e}")))?;
+        reap_child(child);
         return Ok(());
     }
 
@@ -229,10 +236,11 @@ pub fn speak_with_os_tts(text: &str, speed: f64) -> AppResult<()> {
         let script = format!(
             "Add-Type -AssemblyName System.Speech; $s=New-Object System.Speech.Synthesis.SpeechSynthesizer; $s.Rate={rate}; $s.Speak('{safe}');"
         );
-        std::process::Command::new("powershell")
+        let child = std::process::Command::new("powershell")
             .args(["-NoProfile", "-Command", &script])
             .spawn()
             .map_err(|e| AppError::Internal(format!("Lỗi gọi giọng máy Windows: {e}")))?;
+        reap_child(child);
         return Ok(());
     }
 

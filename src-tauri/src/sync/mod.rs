@@ -159,12 +159,14 @@ pub fn import_backup_json(conn: &mut Connection, json_str: &str) -> AppResult<Ba
         )?;
     }
 
+    let mut inserted_logs = 0_i64;
     for r in &payload.review_logs {
-        tx.execute(
+        let changed = tx.execute(
             "INSERT OR IGNORE INTO review_logs (id, card_id, rating, state, elapsed_days, scheduled_days, duration_ms, reviewed_at)
              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
             params![r.id, r.card_id, r.rating, r.state, r.elapsed_days, r.scheduled_days, r.duration_ms, r.reviewed_at],
         )?;
+        inserted_logs += changed as i64;
     }
 
     tx.commit()?;
@@ -173,7 +175,7 @@ pub fn import_backup_json(conn: &mut Connection, json_str: &str) -> AppResult<Ba
         decks: payload.decks.len() as i64,
         notes: payload.notes.len() as i64,
         cards: payload.cards.len() as i64,
-        review_logs: payload.review_logs.len() as i64,
+        review_logs: inserted_logs,
     })
 }
 
@@ -282,5 +284,8 @@ mod tests {
 
         let decks = list_decks(&dst).expect("list");
         assert_eq!(decks[0].name, "Backup Deck");
+
+        let reimport = import_backup_json(&mut dst, &json).expect("reimport");
+        assert_eq!(reimport.review_logs, 0);
     }
 }

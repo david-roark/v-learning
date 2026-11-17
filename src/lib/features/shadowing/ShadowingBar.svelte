@@ -14,6 +14,8 @@
 
   let mediaRecorder: MediaRecorder | null = null;
   let chunks: Blob[] = [];
+  let compareTimer: ReturnType<typeof setTimeout> | null = null;
+  let destroyed = false;
 
   function cleanupUrl() {
     if (recordedUrl) {
@@ -42,9 +44,10 @@
       };
 
       mediaRecorder.onstop = () => {
+        stream.getTracks().forEach((t) => t.stop());
+        if (destroyed) return;
         const blob = new Blob(chunks, { type: "audio/webm" });
         recordedUrl = URL.createObjectURL(blob);
-        stream.getTracks().forEach((t) => t.stop());
       };
 
       mediaRecorder.start();
@@ -61,17 +64,23 @@
   }
 
   function compareAB() {
+    if (compareTimer) clearTimeout(compareTimer);
     onPlaySample();
     if (recordedUrl) {
-      setTimeout(() => playRecorded(), 1400);
+      compareTimer = setTimeout(() => {
+        compareTimer = null;
+        if (!destroyed) playRecorded();
+      }, 1400);
     }
   }
 
   onDestroy(() => {
-    cleanupUrl();
+    destroyed = true;
+    if (compareTimer) clearTimeout(compareTimer);
     if (mediaRecorder && recording) {
       mediaRecorder.stop();
     }
+    cleanupUrl();
   });
 </script>
 

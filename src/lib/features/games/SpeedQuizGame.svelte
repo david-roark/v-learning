@@ -36,6 +36,7 @@
   let targetSource: Note[] = [];
   let queue: Note[] = [];
   let timer: ReturnType<typeof setInterval> | null = null;
+  let advanceTimer: ReturnType<typeof setTimeout> | null = null;
 
   function nextQuestion() {
     pickedId = null;
@@ -53,6 +54,10 @@
 
   function startGame(customTargets?: Note[]) {
     if (timer) clearInterval(timer);
+    if (advanceTimer) {
+      clearTimeout(advanceTimer);
+      advanceTimer = null;
+    }
     targetSource = customTargets && customTargets.length > 0 ? customTargets : notes;
     timeLeft = DURATION_SEC;
     score = 0;
@@ -96,7 +101,9 @@
       }
     }
 
-    setTimeout(() => {
+    if (advanceTimer) clearTimeout(advanceTimer);
+    advanceTimer = setTimeout(() => {
+      advanceTimer = null;
       if (!finished) nextQuestion();
     }, 450);
   }
@@ -114,6 +121,7 @@
   onMount(() => startGame());
   onDestroy(() => {
     if (timer) clearInterval(timer);
+    if (advanceTimer) clearTimeout(advanceTimer);
   });
 </script>
 

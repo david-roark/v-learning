@@ -11,7 +11,7 @@
     ZoomIn,
     ZoomOut,
   } from "@lucide/svelte";
-  import { onDestroy } from "svelte";
+  import { onDestroy, untrack } from "svelte";
   import { notesApi } from "$lib/features/card-editor/api";
   import { decksApi } from "$lib/features/decks/api";
   import { dictionaryApi } from "$lib/features/dictionary/api";
@@ -150,8 +150,9 @@
 
   $effect(() => {
     if (pdfSession && !editing && pdfCanvas && pdfContainer) {
+      const scale = pdfFitMode === "custom" ? pdfZoom : untrack(() => pdfZoom);
       const opts = {
-        scale: pdfZoom,
+        scale,
         fitMode: pdfFitMode,
         containerWidth: pdfContainer.clientWidth,
         containerHeight: pdfContainer.clientHeight,

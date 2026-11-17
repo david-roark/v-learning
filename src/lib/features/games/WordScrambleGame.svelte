@@ -1,6 +1,6 @@
 <script lang="ts">
   import { Delete, Lightbulb, RotateCcw, Trophy, Volume2 } from "@lucide/svelte";
-  import { onMount } from "svelte";
+  import { onDestroy, onMount } from "svelte";
   import { playWordAudio } from "$lib/shared/audio";
   import type { Note } from "$lib/shared/types";
   import { saveBestScore, scrambleLetters, shuffleArray } from "./gameEngine";
@@ -22,6 +22,7 @@
   let mistakes = $state<Note[]>([]);
   let finished = $state(false);
   let bestScore = $state<number | null>(null);
+  let advanceTimer: ReturnType<typeof setTimeout> | null = null;
 
   const currentNote = $derived(queue[currentIndex] ?? null);
   const assembled = $derived(pickedIndices.map((ti) => tiles[ti]?.ch ?? "").join(""));
@@ -34,6 +35,10 @@
   }
 
   function startRound(targetPool: Note[] = notes) {
+    if (advanceTimer) {
+      clearTimeout(advanceTimer);
+      advanceTimer = null;
+    }
     const chosen = shuffleArray(targetPool).slice(0, 10);
     queue = chosen;
     currentIndex = 0;
@@ -63,7 +68,9 @@
         }
       }
 
-      setTimeout(() => {
+      if (advanceTimer) clearTimeout(advanceTimer);
+      advanceTimer = setTimeout(() => {
+        advanceTimer = null;
         if (currentIndex + 1 >= queue.length) {
           finished = true;
           bestScore = saveBestScore("scramble", score, false);
@@ -110,6 +117,9 @@
   }
 
   onMount(() => startRound());
+  onDestroy(() => {
+    if (advanceTimer) clearTimeout(advanceTimer);
+  });
 </script>
 
 <svelte:window onkeydown={handleKeydown} />

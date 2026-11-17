@@ -159,7 +159,7 @@ pub fn extract_article_from_html(html: &str) -> (String, String, Vec<ArticleBloc
     }
 
     let lower_clean = cleaned.to_ascii_lowercase();
-    let mut paragraphs: Vec<(usize, ArticleBlock)> = Vec::new();
+    let mut paragraphs: Vec<(usize, usize, ArticleBlock)> = Vec::new();
     for tag in ["h1", "h2", "h3", "p", "blockquote", "li"] {
         let mut cursor = 0;
         let open_pat = format!("<{tag}");
@@ -168,26 +168,28 @@ pub fn extract_article_from_html(html: &str) -> (String, String, Vec<ArticleBloc
         while let Some(rel_start) = lower_clean[cursor..].find(&open_pat) {
             let abs_start = cursor + rel_start;
             let after = lower_clean[abs_start..].chars().nth(open_pat.len());
-            if after != Some('>') && after != Some(' ') {
+            if !matches!(after, Some('>' | ' ' | '\n' | '\r' | '\t')) {
                 cursor = abs_start + open_pat.len();
                 continue;
             }
             if let Some(gt_rel) = lower_clean[abs_start..].find('>') {
                 let content_start = abs_start + gt_rel + 1;
                 if let Some(end_rel) = lower_clean[content_start..].find(&close_pat) {
+                    let abs_end = content_start + end_rel + close_pat.len();
                     let raw_inner = &cleaned[content_start..content_start + end_rel];
                     let text = strip_tags_simple(raw_inner);
                     let word_count = text.split_whitespace().count();
                     if word_count >= 3 || tag.starts_with('h') && !text.is_empty() {
                         paragraphs.push((
                             abs_start,
+                            abs_end,
                             ArticleBlock {
                                 tag: tag.to_string(),
                                 text,
                             },
                         ));
                     }
-                    cursor = content_start + end_rel + close_pat.len();
+                    cursor = abs_end;
                     continue;
                 }
             }
@@ -195,8 +197,16 @@ pub fn extract_article_from_html(html: &str) -> (String, String, Vec<ArticleBloc
         }
     }
 
-    paragraphs.sort_by_key(|(pos, _)| *pos);
-    let blocks: Vec<ArticleBlock> = paragraphs.into_iter().map(|(_, b)| b).collect();
+    paragraphs.sort_by(|a, b| a.0.cmp(&b.0).then_with(|| b.1.cmp(&a.1)));
+    let mut blocks: Vec<ArticleBlock> = Vec::new();
+    let mut last_end = 0_usize;
+    for (start, end, block) in paragraphs {
+        if start < last_end && end <= last_end {
+            continue;
+        }
+        last_end = end.max(last_end);
+        blocks.push(block);
+    }
     let body_text = blocks
         .iter()
         .map(|b| b.text.as_str())
@@ -527,5 +537,20 @@ mod tests {
         assert_eq!(lines[0].start_sec, 1.5);
         assert_eq!(lines[0].text, "Hello & welcome.");
         assert_eq!(lines[1].text, "Stay resilient!");
+    }
+
+    #[test]
+    fn extract_article_handles_multiline_tags_and_avoids_nested_duplicates() {
+        let html = r#"
+            <article>
+                <p
+                    class="lead">Multiline paragraph tag works properly.</p>
+                <li><p>Nested paragraph inside list item.</p></li>
+            </article>
+        "#;
+        let (_title, _text, blocks) = extract_article_from_html(html);
+        assert_eq!(blocks.len(), 2);
+        assert_eq!(blocks[0].text, "Multiline paragraph tag works properly.");
+        assert_eq!(blocks[1].text, "Nested paragraph inside list item.");
     }
 }

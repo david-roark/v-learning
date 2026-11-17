@@ -215,16 +215,37 @@ pub fn get_daily_stats(conn: &Connection) -> AppResult<DailyStats> {
         |row| row.get(0),
     )?;
 
-    let due_remaining: i64 = conn.query_row(
-        "SELECT COUNT(*) FROM cards WHERE state = 0 OR due <= ?1",
+    let due_review_remaining: i64 = conn.query_row(
+        "SELECT COUNT(*) FROM cards WHERE state != 0 AND due <= ?1",
         params![now_ms],
+        |row| row.get(0),
+    )?;
+
+    let new_remaining: i64 = conn.query_row(
+        "SELECT COALESCE(SUM(MIN(new_count, MAX(0, new_cards_per_day - learned_today))), 0)
+         FROM (
+             SELECT
+                 d.new_cards_per_day,
+                 SUM(CASE WHEN c.state = 0 THEN 1 ELSE 0 END) AS new_count,
+                 (
+                     SELECT COUNT(*) FROM review_logs r
+                     JOIN cards c2 ON c2.id = r.card_id
+                     JOIN notes n2 ON n2.id = c2.note_id
+                     WHERE n2.deck_id = d.id AND r.reviewed_at >= ?1 AND r.state = 0
+                 ) AS learned_today
+             FROM decks d
+             LEFT JOIN notes n ON n.deck_id = d.id
+             LEFT JOIN cards c ON c.note_id = n.id
+             GROUP BY d.id
+         )",
+        params![today_start],
         |row| row.get(0),
     )?;
 
     Ok(DailyStats {
         reviewed_today,
         new_learned_today,
-        due_remaining,
+        due_remaining: due_review_remaining + new_remaining,
     })
 }
 
@@ -354,9 +375,11 @@ mod tests {
 
         let q1 = get_study_queue(&conn, &deck.id, 50).expect("q1");
         assert_eq!(q1.len(), 1);
+        assert_eq!(get_daily_stats(&conn).expect("stats before").due_remaining, 1);
         submit_review(&mut conn, &q1[0].card.id, 3, None).expect("review");
 
         let q2 = get_study_queue(&conn, &deck.id, 50).expect("q2");
         assert_eq!(q2.len(), 0);
+        assert_eq!(get_daily_stats(&conn).expect("stats after").due_remaining, 0);
     }
 }

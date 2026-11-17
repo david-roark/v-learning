@@ -2,7 +2,7 @@
 mod imp {
     use tauri::menu::{Menu, MenuItem};
     use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
-    use tauri::{AppHandle, Manager, WebviewUrl, WebviewWindowBuilder};
+    use tauri::{AppHandle, Emitter, Manager, WebviewUrl, WebviewWindowBuilder};
     use tauri_plugin_global_shortcut::{
         Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState,
     };
@@ -20,6 +20,7 @@ mod imp {
             } else {
                 let _ = win.show();
                 let _ = win.set_focus();
+                let _ = win.emit("quick-lookup-opened", ());
             }
             return;
         }
