@@ -555,7 +555,7 @@
     onClearHistory={handleClearHistory}
   />
 {:else}
-  <div bind:this={readerRoot} class="mx-auto flex w-full flex-col space-y-2 {pdfSession ? '' : 'max-w-4xl'}">
+  <div bind:this={readerRoot} class="flex w-full flex-col space-y-2">
     <div class="flex flex-col space-y-2">
       <!-- Unified Compact Reader Toolbar -->
       <div

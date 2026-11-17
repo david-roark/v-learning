@@ -81,7 +81,7 @@
   }
 </script>
 
-<div class="mx-auto max-w-5xl space-y-5">
+<div class="w-full space-y-5">
   {#if activeMode}
     <div class="flex items-center justify-between">
       <button

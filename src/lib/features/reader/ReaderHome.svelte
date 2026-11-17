@@ -51,7 +51,7 @@
   }
 </script>
 
-<div class="mx-auto max-w-5xl space-y-5">
+<div class="w-full space-y-5">
   <!-- Hero Input Bar -->
   <div class="space-y-3 rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5">
     <div class="flex flex-wrap items-center justify-between gap-3">
