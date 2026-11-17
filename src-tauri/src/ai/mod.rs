@@ -179,4 +179,44 @@ mod tests {
             vec!["gemini-2.5-flash", "gemini-2.5-pro", "gpt-4o-mini"]
         );
     }
+
+    #[test]
+    fn fetch_models_and_evaluate_practice_over_mock_http() {
+        let (base_url, rx) = crate::http_mock::spawn_one_shot(
+            "200 OK",
+            "application/json",
+            br#"{"data":[{"id":"models/gemini-2.5-flash"}]}"#.to_vec(),
+        );
+        let models = tauri::async_runtime::block_on(fetch_models(&base_url, "secret-key"))
+            .expect("fetch_models");
+        assert_eq!(models, vec!["gemini-2.5-flash"]);
+        let req = rx.recv().expect("captured");
+        assert!(req.request_line.starts_with("GET /models "));
+        assert!(req.headers.contains("authorization: Bearer secret-key"));
+
+        let (err_url, _) =
+            crate::http_mock::spawn_one_shot("401 Unauthorized", "text/plain", b"bad key".to_vec());
+        assert!(tauri::async_runtime::block_on(fetch_models(&err_url, "bad")).is_err());
+
+        let (chat_url, chat_rx) = crate::http_mock::spawn_one_shot(
+            "200 OK",
+            "application/json",
+            r#"{"choices":[{"message":{"content":"1) Tốt!"}}]}"#.as_bytes().to_vec(),
+        );
+        let settings = AiSettings {
+            base_url: chat_url,
+            api_key: "k1".into(),
+            model: "gemini-2.5-flash".into(),
+        };
+        let res = tauri::async_runtime::block_on(evaluate_practice(
+            &settings,
+            &["resilient".into()],
+            "She is resilient.",
+        ))
+        .expect("evaluate");
+        assert_eq!(res.feedback, "1) Tốt!");
+        let chat_req = chat_rx.recv().expect("captured chat");
+        assert!(chat_req.request_line.starts_with("POST /chat/completions "));
+        assert!(chat_req.body.contains("resilient"));
+    }
 }

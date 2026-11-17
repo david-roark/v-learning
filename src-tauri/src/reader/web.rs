@@ -574,4 +574,25 @@ mod tests {
         assert_eq!(lines[0].start_sec, 2.5);
         assert_eq!(lines[0].text, "Resilient learners");
     }
+
+    #[test]
+    fn load_url_fetches_article_and_handles_http_errors() {
+        let html = b"<html><head><title>Mock News</title></head><body><article><h1>Daily English</h1><p>Consistent practice builds strong vocabulary over time.</p></article></body></html>".to_vec();
+        let (base_url, _) = crate::http_mock::spawn_one_shot("200 OK", "text/html", html);
+        let res = tauri::async_runtime::block_on(load_url(&format!("{base_url}/post")))
+            .expect("load article");
+        assert_eq!(res.kind, "article");
+        assert_eq!(res.title, "Mock News");
+        assert!(
+            res.article_text
+                .as_deref()
+                .unwrap_or("")
+                .contains("Consistent practice")
+        );
+
+        let (err_url, _) =
+            crate::http_mock::spawn_one_shot("404 Not Found", "text/plain", b"nope".to_vec());
+        assert!(tauri::async_runtime::block_on(load_url(&err_url)).is_err());
+        assert!(tauri::async_runtime::block_on(load_url("ftp://example.com")).is_err());
+    }
 }

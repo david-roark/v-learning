@@ -295,4 +295,47 @@ mod tests {
         assert_eq!(resolve_provider_voice(&settings, "youdao_tts"), "uk");
         assert!(speak_with_os_tts("   ", 1.0).is_err());
     }
+
+    #[test]
+    fn fetch_from_provider_downloads_audio_and_rejects_tiny_payloads() {
+        let client = build_http_client().expect("client");
+        let fake_mp3 = vec![0xFF_u8; 256];
+        let (ok_url, _) =
+            crate::http_mock::spawn_one_shot("200 OK", "audio/mpeg", fake_mp3.clone());
+        let bytes = tauri::async_runtime::block_on(fetch_from_provider(
+            &client,
+            "dictionary_audio",
+            "resilient",
+            Some(&format!("{ok_url}/resilient.mp3")),
+            "",
+        ))
+        .expect("fetch audio");
+        assert_eq!(bytes, fake_mp3);
+
+        let (tiny_url, _) =
+            crate::http_mock::spawn_one_shot("200 OK", "audio/mpeg", vec![0_u8; 32]);
+        assert!(
+            tauri::async_runtime::block_on(fetch_from_provider(
+                &client,
+                "dictionary_audio",
+                "resilient",
+                Some(&tiny_url),
+                "",
+            ))
+            .is_err()
+        );
+
+        let (err_url, _) =
+            crate::http_mock::spawn_one_shot("404 Not Found", "text/plain", b"missing".to_vec());
+        assert!(
+            tauri::async_runtime::block_on(fetch_from_provider(
+                &client,
+                "dictionary_audio",
+                "resilient",
+                Some(&err_url),
+                "",
+            ))
+            .is_err()
+        );
+    }
 }

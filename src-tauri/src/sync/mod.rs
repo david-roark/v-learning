@@ -299,4 +299,45 @@ mod tests {
             "https://dav.example.com/my-backup.json"
         );
     }
+
+    #[test]
+    fn webdav_push_and_pull_over_mock_http() {
+        let (base_url, push_rx) =
+            crate::http_mock::spawn_one_shot("201 Created", "text/plain", Vec::new());
+        let settings = WebDavSettings {
+            url: base_url,
+            username: "alice".into(),
+            password: "pw".into(),
+        };
+        tauri::async_runtime::block_on(webdav_push(&settings, r#"{"version":1}"#.into()))
+            .expect("push");
+        let push_req = push_rx.recv().expect("push req");
+        assert!(push_req.request_line.starts_with("PUT /vlearning-backup.json "));
+        assert!(push_req.headers.to_ascii_lowercase().contains("authorization: basic "));
+        assert_eq!(push_req.body, r#"{"version":1}"#);
+
+        let (pull_url, pull_rx) = crate::http_mock::spawn_one_shot(
+            "200 OK",
+            "application/json",
+            br#"{"version":1,"decks":[]}"#.to_vec(),
+        );
+        let pull_settings = WebDavSettings {
+            url: format!("{pull_url}/custom.json"),
+            username: String::new(),
+            password: String::new(),
+        };
+        let pulled = tauri::async_runtime::block_on(webdav_pull(&pull_settings)).expect("pull");
+        assert_eq!(pulled, r#"{"version":1,"decks":[]}"#);
+        let pull_req = pull_rx.recv().expect("pull req");
+        assert!(pull_req.request_line.starts_with("GET /custom.json "));
+
+        let (err_url, _) =
+            crate::http_mock::spawn_one_shot("404 Not Found", "text/plain", b"missing".to_vec());
+        let err_settings = WebDavSettings {
+            url: err_url,
+            username: String::new(),
+            password: String::new(),
+        };
+        assert!(tauri::async_runtime::block_on(webdav_pull(&err_settings)).is_err());
+    }
 }
