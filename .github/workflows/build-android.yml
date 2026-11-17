@@ -15,9 +15,18 @@ on:
         description: Build debug APK (faster, unsigned-ready for testing)
         type: boolean
         default: true
+      publish_release:
+        description: Publish APK to a GitHub Release
+        type: boolean
+        default: true
+      tag:
+        description: Release tag name (e.g. android-v0.1.0 or v0.1.0)
+        type: string
+        default: android-v0.1.0
+        required: true
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   android:
@@ -79,10 +88,30 @@ jobs:
           fi
           npx tauri android build "${args[@]}"
 
+      - name: Collect APK files
+        run: |
+          mkdir -p dist-apk
+          find src-tauri/gen/android/app/build/outputs/apk -type f -name "*.apk" -exec cp {} dist-apk/ \;
+          ls -lh dist-apk
+
       - name: Upload APK artifact
         uses: actions/upload-artifact@v7
         with:
           name: v-learning-android-${{ inputs.target }}
-          path: src-tauri/gen/android/app/build/outputs/apk/**/*.apk
+          path: dist-apk/*.apk
           if-no-files-found: error
           retention-days: 14
+
+      - name: Publish GitHub Release
+        if: ${{ inputs.publish_release }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="${{ inputs.tag }}"
+          if gh release view "$tag" >/dev/null 2>&1; then
+            gh release upload "$tag" dist-apk/*.apk --clobber
+          else
+            gh release create "$tag" dist-apk/*.apk \
+              --title "V-Learning Android (${tag})" \
+              --notes "Android APK build (${{ inputs.target }})."
+          fi
