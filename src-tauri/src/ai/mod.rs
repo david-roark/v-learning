@@ -63,7 +63,7 @@ pub async fn fetch_models(base_url: &str, api_key: &str) -> AppResult<Vec<String
     }
 
     let url = format!("{base}/models");
-    let client = reqwest::Client::new();
+    let client = crate::http::build_client(20)?;
     let mut req = client.get(&url);
     if !api_key.trim().is_empty() {
         req = req.bearer_auth(api_key.trim());
@@ -117,7 +117,7 @@ pub async fn evaluate_practice(
 
     let user_prompt = format!("Từ vựng mục tiêu: [{words_str}]\nCâu của tôi: {user_text}");
 
-    let client = reqwest::Client::new();
+    let client = crate::http::build_client(30)?;
     let url = format!("{base}/chat/completions");
     let mut req = client.post(&url).json(&ChatRequest {
         model: settings.model.trim(),

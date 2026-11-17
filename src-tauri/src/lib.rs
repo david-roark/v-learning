@@ -5,6 +5,7 @@ mod db;
 mod desktop;
 mod dictionary;
 mod error;
+mod http;
 mod media;
 mod models;
 mod reader;

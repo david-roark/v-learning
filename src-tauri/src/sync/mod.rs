@@ -195,7 +195,7 @@ fn webdav_file_url(base_url: &str) -> AppResult<String> {
 
 pub async fn webdav_push(settings: &WebDavSettings, json_payload: String) -> AppResult<()> {
     let url = webdav_file_url(&settings.url)?;
-    let client = reqwest::Client::new();
+    let client = crate::http::build_client(30)?;
     let mut req = client.put(&url).body(json_payload);
     if !settings.username.trim().is_empty() {
         req = req.basic_auth(settings.username.trim(), Some(settings.password.as_str()));
@@ -216,7 +216,7 @@ pub async fn webdav_push(settings: &WebDavSettings, json_payload: String) -> App
 
 pub async fn webdav_pull(settings: &WebDavSettings) -> AppResult<String> {
     let url = webdav_file_url(&settings.url)?;
-    let client = reqwest::Client::new();
+    let client = crate::http::build_client(30)?;
     let mut req = client.get(&url);
     if !settings.username.trim().is_empty() {
         req = req.basic_auth(settings.username.trim(), Some(settings.password.as_str()));

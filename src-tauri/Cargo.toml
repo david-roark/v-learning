@@ -28,6 +28,8 @@ thiserror = "2.0.21"
 chrono = "0.4.45"
 uuid = { version = "1.29.2", features = ["v4"] }
 reqwest = { version = "0.13.5", features = ["json"] }
+rustls = { version = "0.23", default-features = false, features = ["aws_lc_rs", "std", "tls12"] }
+webpki-roots = "0.26"
 zip = { version = "9.6.0", default-features = false, features = ["deflate"] }
 
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]

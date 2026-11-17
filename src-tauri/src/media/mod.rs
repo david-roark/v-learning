@@ -65,10 +65,7 @@ fn youdao_tts_url(text: &str, voice: &str) -> String {
 }
 
 fn build_http_client() -> AppResult<reqwest::Client> {
-    reqwest::Client::builder()
-        .timeout(std::time::Duration::from_secs(10))
-        .build()
-        .map_err(|e| AppError::Internal(format!("Không thể tạo HTTP client: {e}")))
+    crate::http::build_client(10)
 }
 
 async fn fetch_from_provider(

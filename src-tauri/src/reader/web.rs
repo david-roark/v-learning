@@ -413,11 +413,7 @@ pub async fn load_url(url: &str) -> AppResult<WebReaderResult> {
         ));
     }
 
-    let client = reqwest::Client::builder()
-        .connect_timeout(std::time::Duration::from_secs(6))
-        .timeout(std::time::Duration::from_secs(12))
-        .build()
-        .map_err(|e| AppError::Internal(format!("Không thể khởi tạo HTTP client: {e}")))?;
+    let client = crate::http::build_client(12)?;
     let ua = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36";
 
     if let Some(video_id) = extract_youtube_id(trimmed) {

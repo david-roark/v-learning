@@ -111,10 +111,7 @@ pub(crate) fn percent_encode_query(input: &str) -> String {
 }
 
 async fn translate_en_to_vi(text: &str) -> AppResult<UpsertDictionaryInput> {
-    let client = reqwest::Client::builder()
-        .timeout(std::time::Duration::from_secs(10))
-        .build()
-        .map_err(|e| AppError::Internal(format!("Không thể tạo HTTP client: {e}")))?;
+    let client = crate::http::build_client(10)?;
 
     let url = format!(
         "https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=vi&dt=t&q={}",
@@ -186,10 +183,7 @@ pub async fn fetch_online_entry(word: &str) -> AppResult<UpsertDictionaryInput> 
     }
 
     let url = build_dictionary_url(trimmed);
-    let client = reqwest::Client::builder()
-        .timeout(std::time::Duration::from_secs(10))
-        .build()
-        .map_err(|e| AppError::Internal(format!("Không thể tạo HTTP client: {e}")))?;
+    let client = crate::http::build_client(10)?;
     let resp = client
         .get(&url)
         .header(
@@ -228,7 +222,10 @@ pub async fn fetch_collocations(word: &str) -> AppResult<Vec<String>> {
     }
 
     let url = build_collocations_url(&trimmed);
-    let resp = reqwest::get(&url)
+    let client = crate::http::build_client(10)?;
+    let resp = client
+        .get(&url)
+        .send()
         .await
         .map_err(|e| AppError::Internal(format!("Lỗi kết nối Datamuse: {e}")))?;
 
