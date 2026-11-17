@@ -298,5 +298,7 @@ mod tests {
             build_collocations_url("make up&down"),
             "https://api.datamuse.com/words?rel_bga=make%20up%26down&max=6"
         );
+        assert!(parse_api_response("[]").is_err());
+        assert!(parse_translate_response("[]").is_err());
     }
 }

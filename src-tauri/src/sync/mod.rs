@@ -287,5 +287,16 @@ mod tests {
 
         let reimport = import_backup_json(&mut dst, &json).expect("reimport");
         assert_eq!(reimport.review_logs, 0);
+
+        assert!(import_backup_json(&mut dst, "{invalid json").is_err());
+        assert!(webdav_file_url("   ").is_err());
+        assert_eq!(
+            webdav_file_url("https://dav.example.com/vlearning/").expect("dir url"),
+            "https://dav.example.com/vlearning/vlearning-backup.json"
+        );
+        assert_eq!(
+            webdav_file_url("https://dav.example.com/my-backup.json").expect("file url"),
+            "https://dav.example.com/my-backup.json"
+        );
     }
 }

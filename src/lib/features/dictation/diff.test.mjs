@@ -29,3 +29,20 @@ test("computeDictationDiff treats contractions as equivalent", () => {
   assert.equal(res.isExact, true);
   assert.equal(res.accuracy, 100);
 });
+
+test("computeDictationDiff handles empty input and extra/wrong words", () => {
+  const emptyInput = computeDictationDiff("hello world", "   ");
+  assert.equal(emptyInput.isExact, false);
+  assert.equal(emptyInput.accuracy, 0);
+  assert.equal(emptyInput.tokens.length, 2);
+  assert.ok(emptyInput.tokens.every((t) => t.status === "missing"));
+
+  const wrongAndExtra = computeDictationDiff("she is resilient", "she are very resilient");
+  assert.equal(wrongAndExtra.isExact, false);
+  assert.ok(wrongAndExtra.tokens.some((t) => t.status === "wrong" && t.expected === "is"));
+  assert.ok(wrongAndExtra.tokens.some((t) => t.status === "extra" && t.text === "very"));
+
+  const contractions = computeDictationDiff("it is what I am not", "it's what I'm not");
+  assert.equal(contractions.isExact, true);
+  assert.equal(contractions.accuracy, 100);
+});

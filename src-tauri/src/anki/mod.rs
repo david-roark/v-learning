@@ -194,5 +194,7 @@ mod tests {
             strip_html_and_sound("<b>ubiquitous</b> [adj.] [sound:ubi.mp3]"),
             "ubiquitous [adj.]"
         );
+        let mut conn = open_in_memory_for_test();
+        assert!(import_apkg_bytes(&mut conn, "Bad", b"not-a-zip").is_err());
     }
 }

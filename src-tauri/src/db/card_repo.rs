@@ -381,5 +381,7 @@ mod tests {
         let q2 = get_study_queue(&conn, &deck.id, 50).expect("q2");
         assert_eq!(q2.len(), 0);
         assert_eq!(get_daily_stats(&conn).expect("stats after").due_remaining, 0);
+
+        assert!(submit_review(&mut conn, "nonexistent-card", 3, None).is_err());
     }
 }

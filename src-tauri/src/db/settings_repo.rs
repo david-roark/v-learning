@@ -159,4 +159,26 @@ mod tests {
             Some("uk")
         );
     }
+
+    #[test]
+    fn webdav_settings_defaults_and_save_roundtrip() {
+        let conn = open_in_memory_for_test();
+        let defaults = get_webdav_settings(&conn).expect("defaults");
+        assert!(defaults.url.is_empty());
+
+        save_webdav_settings(
+            &conn,
+            &WebDavSettings {
+                url: " https://dav.example.com/files/ ".into(),
+                username: " alice ".into(),
+                password: "secret".into(),
+            },
+        )
+        .expect("save webdav");
+
+        let loaded = get_webdav_settings(&conn).expect("loaded");
+        assert_eq!(loaded.url, "https://dav.example.com/files/");
+        assert_eq!(loaded.username, "alice");
+        assert_eq!(loaded.password, "secret");
+    }
 }

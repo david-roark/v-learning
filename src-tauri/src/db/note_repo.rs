@@ -302,7 +302,7 @@ mod tests {
         assert!(create_note(&mut conn, make(d1.id.clone(), "pragmatic")).is_err());
         assert!(create_note(&mut conn, make(d2.id, "pragmatic")).is_ok());
 
-        let second = create_note(&mut conn, make(d1.id, "Ephemeral")).expect("second");
+        let second = create_note(&mut conn, make(d1.id.clone(), "Ephemeral")).expect("second");
         let dup_update = update_note(
             &conn,
             UpdateNoteInput {
@@ -316,5 +316,49 @@ mod tests {
             },
         );
         assert!(dup_update.is_err());
+
+        // Empty word/meaning validation and cloze template
+        assert!(
+            create_note(&mut conn, make(d1.id.clone(), "   ")).is_err(),
+            "empty word should fail"
+        );
+        let cloze = create_note(
+            &mut conn,
+            CreateNoteInput {
+                deck_id: d1.id,
+                note_type: "cloze".into(),
+                word: "eloquent".into(),
+                ipa: None,
+                meaning: "hùng hồn".into(),
+                example_sentence: Some("An eloquent speech.".into()),
+                collocations: None,
+                tags: None,
+            },
+        )
+        .expect("cloze note");
+        let tpl: String = conn
+            .query_row(
+                "SELECT card_template FROM cards WHERE note_id = ?1",
+                params![cloze.id],
+                |r| r.get(0),
+            )
+            .expect("card template");
+        assert_eq!(tpl, "cloze");
+
+        assert!(
+            update_note(
+                &conn,
+                UpdateNoteInput {
+                    id: "missing-note".into(),
+                    word: "valid".into(),
+                    ipa: None,
+                    meaning: "hợp lệ".into(),
+                    example_sentence: None,
+                    collocations: None,
+                    tags: None,
+                },
+            )
+            .is_err()
+        );
     }
 }

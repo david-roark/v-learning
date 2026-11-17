@@ -4,6 +4,8 @@ import {
   buildClozeQuestion,
   buildMatchRound,
   buildQuizQuestion,
+  loadBestScores,
+  saveBestScore,
   scrambleLetters,
 } from "./gameEngine.ts";
 
@@ -70,4 +72,55 @@ test("scrambleLetters returns scrambled permutation of same characters", () => {
   assert.equal(letters.length, "pragmatic".length);
   assert.notEqual(letters.join(""), "pragmatic");
   assert.deepEqual([...letters].sort(), [..."pragmatic"].sort());
+
+  assert.deepEqual(scrambleLetters("a"), ["a"]);
+  assert.deepEqual(scrambleLetters("aaa"), ["a", "a", "a"]);
+});
+
+test("buildQuizQuestion supports vi-to-en and deduplicates distractor labels", () => {
+  const notes = [
+    makeNote("1", "eloquent", "hùng hồn"),
+    makeNote("2", "pragmatic", "thực tế"),
+    makeNote("3", "practical", "thực tế"),
+    makeNote("4", "resilient", "kiên cường"),
+    makeNote("5", "ephemeral", "ngắn ngủi"),
+  ];
+  const q = buildQuizQuestion(notes[0], notes, "vi-to-en");
+  assert.equal(q.prompt, "hùng hồn");
+  assert.equal(q.options.filter((o) => o.isCorrect).length, 1);
+  assert.equal(q.options.find((o) => o.isCorrect)?.label, "eloquent");
+
+  const enToVi = buildQuizQuestion(notes[0], notes, "en-to-vi");
+  assert.equal(new Set(enToVi.options.map((o) => o.label)).size, enToVi.options.length);
+});
+
+test("buildClozeQuestion returns null when example lacks exact word boundary", () => {
+  const notes = [
+    makeNote("1", "art", "nghệ thuật", null, "This is a smart choice."),
+    makeNote("2", "pragmatic", "thực tế"),
+  ];
+  assert.equal(buildClozeQuestion(notes[0], notes), null);
+  assert.equal(buildClozeQuestion(notes[1], notes), null);
+});
+
+test("saveBestScore and loadBestScores respect lowerIsBetter and corrupted storage", () => {
+  const store = new Map();
+  globalThis.localStorage = {
+    getItem: (k) => store.get(k) ?? null,
+    setItem: (k, v) => store.set(k, v),
+    removeItem: (k) => store.delete(k),
+    clear: () => store.clear(),
+  };
+
+  assert.equal(saveBestScore("quiz", 120, false), 120);
+  assert.equal(saveBestScore("quiz", 90, false), 120);
+  assert.equal(saveBestScore("quiz", 150, false), 150);
+
+  assert.equal(saveBestScore("match", 8500, true), 8500);
+  assert.equal(saveBestScore("match", 9200, true), 8500);
+  assert.equal(saveBestScore("match", 6400, true), 6400);
+  assert.deepEqual(loadBestScores(), { quiz: 150, match: 6400 });
+
+  store.set("vlearning_game_scores", "{corrupt");
+  assert.deepEqual(loadBestScores(), {});
 });

@@ -553,4 +553,25 @@ mod tests {
         assert_eq!(blocks[0].text, "Multiline paragraph tag works properly.");
         assert_eq!(blocks[1].text, "Nested paragraph inside list item.");
     }
+
+    #[test]
+    fn youtube_caption_url_and_srv3_transcript_work() {
+        assert_eq!(
+            extract_youtube_id("https://www.youtube.com/embed/dQw4w9WgXcQ").as_deref(),
+            Some("dQw4w9WgXcQ")
+        );
+        assert!(extract_youtube_id("https://example.com/not-youtube").is_none());
+
+        let watch_html = r#"{"captionTracks":[{"baseUrl":"https://yt.example/cap?lang=vi\u0026fmt=srv3","languageCode":"vi"},{"baseUrl":"https://yt.example/cap?lang=en\u0026fmt=srv3","languageCode":"en"}]}"#;
+        assert_eq!(
+            parse_caption_track_url(watch_html).as_deref(),
+            Some("https://yt.example/cap?lang=en&fmt=srv3")
+        );
+
+        let srv3 = r#"<timedtext><body><p t="2500" d="1000">Resilient <b>learners</b></p></body></timedtext>"#;
+        let lines = parse_transcript_xml(srv3);
+        assert_eq!(lines.len(), 1);
+        assert_eq!(lines[0].start_sec, 2.5);
+        assert_eq!(lines[0].text, "Resilient learners");
+    }
 }

@@ -117,3 +117,32 @@ pub fn run_migrations(conn: &Connection) -> AppResult<()> {
     }
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn run_migrations_cleans_legacy_bulk_dictionary_entries() {
+        let conn = Connection::open_in_memory().expect("open");
+        run_migrations(&conn).expect("initial migrate");
+
+        conn.execute(
+            "INSERT INTO dictionary_entries (word, meaning_vi, source) VALUES ('legacy', 'cũ', 'anhviet109k')",
+            [],
+        )
+        .expect("insert legacy");
+        conn.execute(
+            "INSERT INTO dictionary_entries (word, meaning_vi, source) VALUES ('custom', 'tùy chỉnh', 'local')",
+            [],
+        )
+        .expect("insert custom");
+
+        run_migrations(&conn).expect("re-run migrate");
+
+        let count: i64 = conn
+            .query_row("SELECT COUNT(*) FROM dictionary_entries", [], |r| r.get(0))
+            .expect("count");
+        assert_eq!(count, 1);
+    }
+}

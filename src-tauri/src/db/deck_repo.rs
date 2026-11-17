@@ -129,4 +129,35 @@ mod tests {
         assert!(list_decks(&conn).expect("list after delete").is_empty());
         assert!(delete_deck(&conn, "missing-id").is_err());
     }
+
+    #[test]
+    fn create_deck_clamps_limits_and_tracks_stats() {
+        let conn = open_in_memory_for_test();
+        let clamped = create_deck(
+            &conn,
+            CreateDeckInput {
+                name: "Clamped".into(),
+                description: Some("   ".into()),
+                new_cards_per_day: Some(0),
+                desired_retention: Some(1.5),
+            },
+        )
+        .expect("clamped deck");
+        assert_eq!(clamped.new_cards_per_day, 1);
+        assert!((clamped.desired_retention - 0.99).abs() < 1e-6);
+        assert!(clamped.description.is_none());
+
+        let high = create_deck(
+            &conn,
+            CreateDeckInput {
+                name: "High".into(),
+                description: None,
+                new_cards_per_day: Some(9999),
+                desired_retention: Some(0.1),
+            },
+        )
+        .expect("high deck");
+        assert_eq!(high.new_cards_per_day, 500);
+        assert!((high.desired_retention - 0.70).abs() < 1e-6);
+    }
 }

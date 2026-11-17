@@ -187,4 +187,37 @@ mod tests {
         assert!(schedule_card(&card, 0, 0.90).is_err());
         assert!(schedule_card(&card, 5, 0.90).is_err());
     }
+
+    #[test]
+    fn format_interval_days_formats_days_months_years() {
+        assert_eq!(format_interval_days(0.2), "1 ngày");
+        assert_eq!(format_interval_days(12.0), "12 ngày");
+        assert_eq!(format_interval_days(60.0), "2 tháng");
+        assert_eq!(format_interval_days(400.0), "1.1 năm");
+    }
+
+    #[test]
+    fn schedule_review_card_computes_elapsed_days_and_easy_hard_ordering() {
+        let now_ms = Utc::now().timestamp_millis();
+        let card = Card {
+            id: "c2".into(),
+            note_id: "n2".into(),
+            card_template: "recognition".into(),
+            state: 2,
+            due: now_ms,
+            stability: 6.0,
+            difficulty: 5.0,
+            elapsed_days: 0,
+            scheduled_days: 6,
+            reps: 2,
+            lapses: 0,
+            last_review: Some(now_ms - 5 * 86_400_000),
+        };
+        let hard = schedule_card(&card, 2, 0.90).expect("hard");
+        let easy = schedule_card(&card, 4, 0.90).expect("easy");
+        assert_eq!(hard.elapsed_days, 5);
+        assert_eq!(easy.elapsed_days, 5);
+        assert!(easy.scheduled_days >= hard.scheduled_days);
+        assert_eq!(easy.reps, 3);
+    }
 }

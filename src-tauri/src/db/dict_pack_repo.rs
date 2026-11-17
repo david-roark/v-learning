@@ -526,4 +526,29 @@ mod tests {
         assert!(!pack_path.exists());
         let _ = fs::remove_dir_all(&dir);
     }
+
+    #[test]
+    fn read_pack_info_none_and_rejects_sqlite_missing_tables() {
+        let empty_info = read_pack_info(None).expect("none info");
+        assert!(!empty_info.installed);
+        assert_eq!(empty_info.word_count, 0);
+
+        let dir = std::env::temp_dir().join(format!("vlearning_pack_incomplete_{}", std::process::id()));
+        let _ = fs::create_dir_all(&dir);
+        let src_db = dir.join("incomplete.db");
+        {
+            let c = Connection::open(&src_db).expect("open");
+            c.execute_batch("CREATE TABLE entries (id INTEGER PRIMARY KEY);")
+                .expect("seed");
+        }
+        let bytes = fs::read(&src_db).expect("read");
+        let pack_path = dir.join("dict.db");
+        let state = DictPackState(Mutex::new(None));
+
+        begin_pack_install(&pack_path).expect("begin");
+        append_pack_chunk(&pack_path, &bytes).expect("append");
+        assert!(finish_pack_install(&state, &pack_path).is_err());
+        assert!(!pack_path.with_extension("db.tmp").exists());
+        let _ = fs::remove_dir_all(&dir);
+    }
 }

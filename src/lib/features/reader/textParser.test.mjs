@@ -30,4 +30,24 @@ This is pragmatic.`;
 test("joinPdfLines merges hyphenated words across line breaks", () => {
   const lines = ["Smartphones have become ubiqui-", "tous in modern life."];
   assert.equal(joinPdfLines(lines), "Smartphones have become ubiquitous in modern life.");
+
+  const uppercaseAfterHyphen = ["State-of-the-", "Art technology", "", "works well."];
+  assert.equal(joinPdfLines(uppercaseAfterHyphen), "State-of-the- Art technology works well.");
+});
+
+test("tokenizeWithSentences preserves apostrophes and hyphenated words", () => {
+  const tokens = tokenizeWithSentences("Well-known leaders don't quit.");
+  const words = tokens.filter((t) => t.isWord).map((t) => t.text);
+  assert.deepEqual(words, ["Well-known", "leaders", "don't", "quit"]);
+});
+
+test("stripSubtitleMetadata handles WEBVTT headers and nested tags", () => {
+  const vtt = `WEBVTT
+
+00:00:01.000 --> 00:00:02.500
+<c>First line</c>
+
+00:00:03.000 --> 00:00:04.500
+Second line`;
+  assert.equal(stripSubtitleMetadata(vtt), "First line Second line");
 });

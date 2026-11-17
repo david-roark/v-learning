@@ -177,4 +177,21 @@ mod tests {
         assert_eq!(summary.heatmap.len(), 180);
         assert_eq!(summary.forecast_7d.len(), 14);
     }
+
+    #[test]
+    fn compute_streak_continues_from_yesterday_and_stops_on_gap() {
+        let today = Local::now().date_naive();
+        let yesterday = (today - Duration::days(1)).format("%Y-%m-%d").to_string();
+        let two_days_ago = (today - Duration::days(2)).format("%Y-%m-%d").to_string();
+        let four_days_ago = (today - Duration::days(4)).format("%Y-%m-%d").to_string();
+
+        let counts = HashMap::from([
+            (yesterday, 3),
+            (two_days_ago, 1),
+            // gap on today - 3 days
+            (four_days_ago, 5),
+        ]);
+        assert_eq!(compute_streak(&counts), 2);
+        assert_eq!(compute_streak(&HashMap::new()), 0);
+    }
 }

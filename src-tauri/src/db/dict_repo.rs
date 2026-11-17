@@ -103,7 +103,7 @@ pub fn bulk_import_tsv(conn: &mut Connection, content: &str) -> AppResult<i64> {
             if trimmed.is_empty() || trimmed.starts_with('#') {
                 continue;
             }
-            let cols: Vec<&str> = trimmed.split('\t').collect();
+            let cols: Vec<&str> = line.trim_end_matches(['\r', '\n']).split('\t').collect();
             let word = cols.first().map(|s| s.trim()).unwrap_or("");
             if word.is_empty() {
                 continue;
@@ -218,5 +218,18 @@ mod tests {
         assert_eq!(upserted.word, "serendipity");
         let found = search_fts(&conn, "serend", 5).expect("search new word");
         assert_eq!(found.len(), 1);
+    }
+
+    #[test]
+    fn bulk_import_tsv_skips_comments_empty_word_col_and_handles_empty_search() {
+        let mut conn = open_in_memory_for_test();
+        let tsv = "# comment line\n\n\t/ˈfɔː.nə/\tnoun\tđộng vật\nresilient\t/rɪˈzɪl.jənt/\tadj\tkiên cường\tStay resilient.\n";
+        let imported = bulk_import_tsv(&mut conn, tsv).expect("import tsv");
+        assert_eq!(imported, 1);
+        assert!(find_exact(&conn, "/ˈfɔː.nə/").expect("find").is_none());
+
+        let entry = find_exact(&conn, "resilient").expect("find").expect("exists");
+        assert_eq!(entry.meaning_vi.as_deref(), Some("kiên cường"));
+        assert!(search_fts(&conn, "!!!", 10).expect("punct").is_empty());
     }
 }

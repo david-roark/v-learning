@@ -172,7 +172,7 @@ mod tests {
 
     #[test]
     fn parse_models_json_strips_models_prefix_and_sorts() {
-        let json = r#"{"data":[{"id":"models/gemini-2.5-flash"},{"id":"models/gemini-2.5-pro"},{"id":"gpt-4o-mini"}]}"#;
+        let json = r#"{"data":[{"id":"models/gemini-2.5-flash"},{"id":"models/gemini-2.5-pro"},{"id":"gpt-4o-mini"},{"id":"models/gemini-2.5-flash"},{"id":""}]}"#;
         let ids = parse_models_json(json).expect("parse models");
         assert_eq!(
             ids,

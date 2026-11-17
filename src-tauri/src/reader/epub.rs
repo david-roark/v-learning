@@ -327,4 +327,24 @@ mod tests {
         assert_eq!(book.chapters.len(), 1);
         assert_eq!(book.chapters[0].title, "Chương 1");
     }
+
+    #[test]
+    fn parse_epub_rejects_invalid_or_empty_archives_and_falls_back_without_container() {
+        assert!(parse_epub_bytes(b"not a zip").is_err());
+
+        let mut buf = Cursor::new(Vec::new());
+        {
+            let mut zip = zip::ZipWriter::new(&mut buf);
+            zip.start_file("ch1.xhtml", SimpleFileOptions::default())
+                .unwrap();
+            zip.write_all(
+                br#"<html><body><p>Fallback chapter discovery without container.xml works!</p></body></html>"#,
+            )
+            .unwrap();
+            zip.finish().unwrap();
+        }
+        let book = parse_epub_bytes(buf.get_ref()).expect("fallback epub");
+        assert_eq!(book.chapters.len(), 1);
+        assert_eq!(book.chapters[0].title, "Chương 1");
+    }
 }
