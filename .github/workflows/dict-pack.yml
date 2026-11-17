@@ -4,12 +4,13 @@ on:
   workflow_dispatch:
     inputs:
       profile:
-        description: Dictionary profile to build
+        description: Dictionary profile(s) to build
         type: choice
         options:
+          - all
           - modern
           - full
-        default: modern
+        default: all
         required: true
       version:
         description: Pack version tag (e.g. v1.0.0)
@@ -21,7 +22,7 @@ on:
         type: boolean
         default: false
       publish_release:
-        description: Publish built .db.zst and manifest.json to a GitHub Release
+        description: Publish built .db.zst and manifest.json to GitHub Releases
         type: boolean
         default: false
 
@@ -29,9 +30,27 @@ permissions:
   contents: write
 
 jobs:
-  build-pack:
-    name: Build Dict Pack (${{ inputs.profile }})
+  prepare:
     runs-on: ubuntu-latest
+    outputs:
+      profiles: ${{ steps.set-matrix.outputs.profiles }}
+    steps:
+      - id: set-matrix
+        run: |
+          if [ "${{ inputs.profile }}" = "all" ]; then
+            echo 'profiles=["modern","full"]' >> "$GITHUB_OUTPUT"
+          else
+            echo 'profiles=["${{ inputs.profile }}"]' >> "$GITHUB_OUTPUT"
+          fi
+
+  build-pack:
+    name: Build Dict Pack (${{ matrix.profile }})
+    needs: prepare
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        profile: ${{ fromJSON(needs.prepare.outputs.profiles) }}
 
     steps:
       - name: Checkout repository
@@ -49,7 +68,10 @@ jobs:
 
       - name: Build dictionary pack
         run: |
-          args=(--profile "${{ inputs.profile }}" --version "${{ inputs.version }}")
+          args=(--profile "${{ matrix.profile }}" --version "${{ inputs.version }}")
+          if [ "${{ matrix.profile }}" = "full" ]; then
+            args+=(--with-gcide)
+          fi
           if [ "${{ inputs.with_kaikki_en }}" = "true" ]; then
             args+=(--with-kaikki-en)
           fi
@@ -58,7 +80,7 @@ jobs:
       - name: Upload pack artifacts
         uses: actions/upload-artifact@v7
         with:
-          name: dict-${{ inputs.profile }}-${{ inputs.version }}
+          name: dict-${{ matrix.profile }}-${{ inputs.version }}
           path: |
             scripts/dict-builder/dist/*.db.zst
             scripts/dict-builder/dist/*.manifest.json
@@ -70,13 +92,13 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          tag="dict-${{ inputs.profile }}-${{ inputs.version }}"
+          tag="dict-${{ matrix.profile }}-${{ inputs.version }}"
           if gh release view "$tag" >/dev/null 2>&1; then
             gh release upload "$tag" scripts/dict-builder/dist/*.db.zst scripts/dict-builder/dist/*.manifest.json --clobber
           else
             gh release create "$tag" \
               scripts/dict-builder/dist/*.db.zst \
               scripts/dict-builder/dist/*.manifest.json \
-              --title "Dictionary Pack (${{ inputs.profile }} ${{ inputs.version }})" \
-              --notes "Offline FTS5 dictionary pack built with profile \`${{ inputs.profile }}\`."
+              --title "Dictionary Pack (${{ matrix.profile }} ${{ inputs.version }})" \
+              --notes "Offline FTS5 dictionary pack built with profile \`${{ matrix.profile }}\`."
           fi
