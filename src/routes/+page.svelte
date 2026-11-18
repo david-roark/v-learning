@@ -168,7 +168,9 @@
                 </div>
               </div>
 
-              <div class="flex shrink-0 items-center justify-end gap-2 sm:flex-col sm:justify-center">
+              <div
+                class="flex shrink-0 items-center justify-end gap-2 sm:flex-col sm:justify-center"
+              >
                 <button
                   type="button"
                   onclick={() => (showDeckModal = true)}

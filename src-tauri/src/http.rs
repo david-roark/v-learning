@@ -38,12 +38,12 @@ mod tests {
     #[test]
     fn build_client_with_webpki_roots_succeeds_and_fetches_mock_http() {
         let client = build_client(10).expect("build_client");
-        let (url, _) =
-            crate::http_mock::spawn_one_shot("200 OK", "text/plain", b"ok".to_vec());
-        let body = tauri::async_runtime::block_on(async move {
-            client.get(&url).send().await?.text().await
-        })
-        .expect("fetch");
+        let (url, _) = crate::http_mock::spawn_one_shot("200 OK", "text/plain", b"ok".to_vec());
+        let body =
+            tauri::async_runtime::block_on(
+                async move { client.get(&url).send().await?.text().await },
+            )
+            .expect("fetch");
         assert_eq!(body, "ok");
     }
 }

@@ -586,7 +586,11 @@
           >
             <ArrowLeft class="h-3.5 w-3.5" />
           </button>
-          <h2 class="truncate text-xs font-semibold text-white {totalItems > 0 ? 'hidden sm:block' : ''}">
+          <h2
+            class="truncate text-xs font-semibold text-white {totalItems > 0
+              ? 'hidden sm:block'
+              : ''}"
+          >
             {bookTitle || "Đọc báo, Sách & Video"}
           </h2>
         </div>

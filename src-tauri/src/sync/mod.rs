@@ -312,8 +312,17 @@ mod tests {
         tauri::async_runtime::block_on(webdav_push(&settings, r#"{"version":1}"#.into()))
             .expect("push");
         let push_req = push_rx.recv().expect("push req");
-        assert!(push_req.request_line.starts_with("PUT /vlearning-backup.json "));
-        assert!(push_req.headers.to_ascii_lowercase().contains("authorization: basic "));
+        assert!(
+            push_req
+                .request_line
+                .starts_with("PUT /vlearning-backup.json ")
+        );
+        assert!(
+            push_req
+                .headers
+                .to_ascii_lowercase()
+                .contains("authorization: basic ")
+        );
         assert_eq!(push_req.body, r#"{"version":1}"#);
 
         let (pull_url, pull_rx) = crate::http_mock::spawn_one_shot(

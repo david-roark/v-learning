@@ -65,7 +65,9 @@
           <div>
             <div class="flex items-center gap-2">
               <h2 id="about-modal-title" class="text-lg font-bold text-white">V-Learning</h2>
-              <span class="rounded-full bg-indigo-500/15 px-2 py-0.5 font-mono text-[11px] font-medium text-indigo-300">
+              <span
+                class="rounded-full bg-indigo-500/15 px-2 py-0.5 font-mono text-[11px] font-medium text-indigo-300"
+              >
                 v{appVersion}
               </span>
             </div>
@@ -115,10 +117,10 @@
             </button>
           </div>
           <p class="leading-relaxed text-zinc-400">
-            <strong class="text-zinc-200">V-Learning Personal & Non-Commercial License</strong> —
-            Miễn phí cho mục đích cá nhân, học tập và phi thương mại. Dữ liệu từ điển offline tuân
-            thủ giấy phép nguồn mở tương ứng (Skypediacode & Kaikki.org CC BY-SA 4.0, Open English
-            WordNet CC BY 4.0, CMUdict, SCOWL, GCIDE).
+            <strong class="text-zinc-200">V-Learning Personal & Non-Commercial License</strong> — Miễn
+            phí cho mục đích cá nhân, học tập và phi thương mại. Dữ liệu từ điển offline tuân thủ giấy
+            phép nguồn mở tương ứng (Skypediacode & Kaikki.org CC BY-SA 4.0, Open English WordNet CC BY
+            4.0, CMUdict, SCOWL, GCIDE).
           </p>
         </div>
 

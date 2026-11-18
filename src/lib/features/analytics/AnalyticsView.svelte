@@ -1,13 +1,5 @@
 <script lang="ts">
-  import {
-    AlertTriangle,
-    Award,
-    BookOpen,
-    Clock,
-    Flame,
-    Target,
-    Volume2,
-  } from "@lucide/svelte";
+  import { AlertTriangle, Award, BookOpen, Clock, Flame, Target, Volume2 } from "@lucide/svelte";
   import { playWordAudio } from "$lib/shared/audio";
   import Select from "$lib/shared/components/Select.svelte";
   import type { AnalyticsSummary, DeckWithStats } from "$lib/shared/types";
@@ -116,7 +108,9 @@
           Tổng từ vựng
         </div>
         <p class="mt-2 text-2xl font-bold text-white">{summary.totalNotes}</p>
-        <p class="mt-0.5 text-[11px] text-zinc-400">{summary.totalCards} thẻ · {summary.totalReviews} lượt ôn</p>
+        <p class="mt-0.5 text-[11px] text-zinc-400">
+          {summary.totalCards} thẻ · {summary.totalReviews} lượt ôn
+        </p>
       </div>
 
       <div class="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4">
@@ -155,7 +149,9 @@
         </div>
         <p class="mt-2 text-2xl font-bold text-white">{formatDuration(summary.studyMsToday)}</p>
         <p class="mt-0.5 text-[11px] text-zinc-400">
-          Tổng: {formatDuration(summary.totalStudyMs)} · TB {(summary.avgDurationMs / 1000).toFixed(1)}s/thẻ
+          Tổng: {formatDuration(summary.totalStudyMs)} · TB {(summary.avgDurationMs / 1000).toFixed(
+            1,
+          )}s/thẻ
         </p>
       </div>
     </div>
@@ -242,12 +238,7 @@
         </div>
 
         <div class="space-y-2.5 text-xs">
-          {#each [
-            { label: "1 · Quên (Again)", count: summary.ratingCounts.again, bar: "bg-rose-500", text: "text-rose-400" },
-            { label: "2 · Khó (Hard)", count: summary.ratingCounts.hard, bar: "bg-amber-500", text: "text-amber-400" },
-            { label: "3 · Tốt (Good)", count: summary.ratingCounts.good, bar: "bg-emerald-500", text: "text-emerald-400" },
-            { label: "4 · Dễ (Easy)", count: summary.ratingCounts.easy, bar: "bg-sky-500", text: "text-sky-400" },
-          ] as row (row.label)}
+          {#each [{ label: "1 · Quên (Again)", count: summary.ratingCounts.again, bar: "bg-rose-500", text: "text-rose-400" }, { label: "2 · Khó (Hard)", count: summary.ratingCounts.hard, bar: "bg-amber-500", text: "text-amber-400" }, { label: "3 · Tốt (Good)", count: summary.ratingCounts.good, bar: "bg-emerald-500", text: "text-emerald-400" }, { label: "4 · Dễ (Easy)", count: summary.ratingCounts.easy, bar: "bg-sky-500", text: "text-sky-400" }] as row (row.label)}
             {@const rowPct = pct(row.count, summary.totalReviews)}
             <div class="space-y-1">
               <div class="flex items-center justify-between">
@@ -274,13 +265,18 @@
             <p class="mt-0.5 text-xs text-zinc-400">
               Giờ học nhiều nhất:
               <strong class="text-indigo-400">
-                {String(summary.peakHour).padStart(2, "0")}:00–{String(summary.peakHour).padStart(2, "0")}:59
+                {String(summary.peakHour).padStart(2, "0")}:00–{String(summary.peakHour).padStart(
+                  2,
+                  "0",
+                )}:59
               </strong>
               · Ngày chăm nhất:
               <strong class="text-indigo-400">{WEEKDAY_FULL[summary.peakWeekday]}</strong>
             </p>
           {:else}
-            <p class="mt-0.5 text-xs text-zinc-400">Chưa có dữ liệu ôn tập để phân tích khung giờ.</p>
+            <p class="mt-0.5 text-xs text-zinc-400">
+              Chưa có dữ liệu ôn tập để phân tích khung giờ.
+            </p>
           {/if}
         </div>
 
@@ -298,7 +294,9 @@
       <div class="overflow-x-auto">
         <div class="min-w-[540px] space-y-1">
           <!-- Hour Labels -->
-          <div class="grid grid-cols-[2rem_repeat(24,minmax(0,1fr))] gap-1 text-center text-[10px] text-zinc-400">
+          <div
+            class="grid grid-cols-[2rem_repeat(24,minmax(0,1fr))] gap-1 text-center text-[10px] text-zinc-400"
+          >
             <span></span>
             {#each Array.from({ length: 24 }, (_, h) => h) as hr (hr)}
               <span class="font-mono">{hr % 3 === 0 ? `${hr}h` : ""}</span>
@@ -402,7 +400,9 @@
                   <p class="truncate text-[11px] text-zinc-400">{lw.meaning}</p>
                 </div>
                 <div class="flex shrink-0 items-center gap-1.5">
-                  <span class="rounded-md bg-rose-500/15 px-1.5 py-0.5 font-mono text-[10px] text-rose-400">
+                  <span
+                    class="rounded-md bg-rose-500/15 px-1.5 py-0.5 font-mono text-[10px] text-rose-400"
+                  >
                     {lw.lapses} quên
                   </span>
                   <button

@@ -533,7 +533,8 @@ mod tests {
         assert!(!empty_info.installed);
         assert_eq!(empty_info.word_count, 0);
 
-        let dir = std::env::temp_dir().join(format!("vlearning_pack_incomplete_{}", std::process::id()));
+        let dir =
+            std::env::temp_dir().join(format!("vlearning_pack_incomplete_{}", std::process::id()));
         let _ = fs::create_dir_all(&dir);
         let src_db = dir.join("incomplete.db");
         {

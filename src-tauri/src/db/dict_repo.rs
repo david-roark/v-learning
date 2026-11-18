@@ -228,7 +228,9 @@ mod tests {
         assert_eq!(imported, 1);
         assert!(find_exact(&conn, "/ˈfɔː.nə/").expect("find").is_none());
 
-        let entry = find_exact(&conn, "resilient").expect("find").expect("exists");
+        let entry = find_exact(&conn, "resilient")
+            .expect("find")
+            .expect("exists");
         assert_eq!(entry.meaning_vi.as_deref(), Some("kiên cường"));
         assert!(search_fts(&conn, "!!!", 10).expect("punct").is_empty());
     }

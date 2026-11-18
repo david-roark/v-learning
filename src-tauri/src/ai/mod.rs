@@ -201,7 +201,9 @@ mod tests {
         let (chat_url, chat_rx) = crate::http_mock::spawn_one_shot(
             "200 OK",
             "application/json",
-            r#"{"choices":[{"message":{"content":"1) Tốt!"}}]}"#.as_bytes().to_vec(),
+            r#"{"choices":[{"message":{"content":"1) Tốt!"}}]}"#
+                .as_bytes()
+                .to_vec(),
         );
         let settings = AiSettings {
             base_url: chat_url,

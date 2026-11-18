@@ -27,6 +27,19 @@ export default ts.config(
     },
   },
   {
+    rules: {
+      eqeqeq: ["error", "always"],
+      "@typescript-eslint/no-unused-vars": [
+        "error",
+        {
+          argsIgnorePattern: "^_",
+          varsIgnorePattern: "^_",
+          caughtErrorsIgnorePattern: "^_",
+        },
+      ],
+    },
+  },
+  {
     ignores: ["build/", ".svelte-kit/", "src-tauri/target/", "node_modules/"],
   },
 );

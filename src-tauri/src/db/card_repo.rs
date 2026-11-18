@@ -375,12 +375,18 @@ mod tests {
 
         let q1 = get_study_queue(&conn, &deck.id, 50).expect("q1");
         assert_eq!(q1.len(), 1);
-        assert_eq!(get_daily_stats(&conn).expect("stats before").due_remaining, 1);
+        assert_eq!(
+            get_daily_stats(&conn).expect("stats before").due_remaining,
+            1
+        );
         submit_review(&mut conn, &q1[0].card.id, 3, None).expect("review");
 
         let q2 = get_study_queue(&conn, &deck.id, 50).expect("q2");
         assert_eq!(q2.len(), 0);
-        assert_eq!(get_daily_stats(&conn).expect("stats after").due_remaining, 0);
+        assert_eq!(
+            get_daily_stats(&conn).expect("stats after").due_remaining,
+            0
+        );
 
         assert!(submit_review(&mut conn, "nonexistent-card", 3, None).is_err());
     }

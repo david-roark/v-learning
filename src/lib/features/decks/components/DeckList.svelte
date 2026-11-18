@@ -32,8 +32,7 @@
       if (onlyDue && d.newCount + d.dueCount === 0) return false;
       if (!q) return true;
       return (
-        d.name.toLowerCase().includes(q) ||
-        (d.description?.toLowerCase().includes(q) ?? false)
+        d.name.toLowerCase().includes(q) || (d.description?.toLowerCase().includes(q) ?? false)
       );
     });
   });
@@ -186,7 +185,9 @@
           </div>
 
           <!-- Actions -->
-          <div class="mt-4 flex items-center gap-1.5 border-t border-zinc-800/80 pt-3.5 @[240px]:gap-2">
+          <div
+            class="mt-4 flex items-center gap-1.5 border-t border-zinc-800/80 pt-3.5 @[240px]:gap-2"
+          >
             <button
               type="button"
               onclick={() => onStudy(deck)}
@@ -253,7 +254,9 @@
             Xoá bộ thẻ "{confirmDeleteTarget.name}"?
           </h3>
           <p class="mt-1.5 text-xs leading-relaxed text-zinc-400">
-            Bộ thẻ này đang có <strong class="text-zinc-200">{confirmDeleteTarget.totalCards}</strong>
+            Bộ thẻ này đang có <strong class="text-zinc-200"
+              >{confirmDeleteTarget.totalCards}</strong
+            >
             thẻ. Toàn bộ từ vựng, thẻ và lịch sử ôn tập thuộc bộ này sẽ bị xoá vĩnh viễn và không thể
             hoàn tác.
           </p>

@@ -45,3 +45,12 @@ lto = true
 opt-level = 3
 panic = "abort"
 strip = true
+
+[lints.rust]
+unused_variables = "deny"
+unused_imports = "deny"
+dead_code = "deny"
+unused_mut = "deny"
+
+[lints.clippy]
+all = { level = "warn", priority = -1 }
