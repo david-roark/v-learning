@@ -150,11 +150,19 @@ pub fn status_from_settings(settings: &GoogleDriveSettings) -> GoogleDriveStatus
         user_email: settings.user_email.clone(),
         client_id: effective_client_id,
         has_client_secret: has_secret,
+        auto_sync: settings.auto_sync,
     }
 }
 
 pub fn get_status(conn: &Connection) -> AppResult<GoogleDriveStatus> {
     let settings = settings_repo::get_google_drive_settings(conn)?;
+    Ok(status_from_settings(&settings))
+}
+
+pub fn set_auto_sync(conn: &Connection, enabled: bool) -> AppResult<GoogleDriveStatus> {
+    let mut settings = settings_repo::get_google_drive_settings(conn)?;
+    settings.auto_sync = enabled;
+    settings_repo::save_google_drive_settings(conn, &settings)?;
     Ok(status_from_settings(&settings))
 }
 
@@ -164,6 +172,8 @@ pub fn logout(conn: &Connection) -> AppResult<GoogleDriveStatus> {
     settings.refresh_token.clear();
     settings.expires_at = 0;
     settings.user_email.clear();
+    settings.last_synced_remote_modified.clear();
+    settings.auto_sync = false;
     settings_repo::save_google_drive_settings(conn, &settings)?;
     Ok(status_from_settings(&settings))
 }
@@ -727,20 +737,27 @@ pub async fn drive_get_backup_info(access_token: &str) -> AppResult<GoogleDriveB
     drive_get_backup_info_with_endpoint(&client, GOOGLE_DRIVE_API_BASE, access_token).await
 }
 
+pub fn check_push_conflict(remote_modified: Option<&str>, last_synced: &str) -> bool {
+    match remote_modified {
+        Some(rm) if !rm.trim().is_empty() => rm.trim() != last_synced.trim(),
+        _ => false,
+    }
+}
+
 pub(crate) async fn drive_push_with_endpoints(
     client: &reqwest::Client,
     api_base: &str,
     upload_base: &str,
     access_token: &str,
     json_body: &str,
-) -> AppResult<()> {
+) -> AppResult<Option<String>> {
     let existing_id = find_backup_file_meta(client, api_base, access_token)
         .await?
         .map(|f| f.id);
 
     let resp = if let Some(file_id) = existing_id {
         let url = format!(
-            "{}/files/{}?uploadType=media",
+            "{}/files/{}?uploadType=media&fields=id,modifiedTime",
             upload_base.trim_end_matches('/'),
             percent_encode(&file_id),
         );
@@ -762,7 +779,7 @@ pub(crate) async fn drive_push_with_endpoints(
             "--{boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n{metadata}\r\n--{boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n{json_body}\r\n--{boundary}--\r\n"
         );
         let url = format!(
-            "{}/files?uploadType=multipart",
+            "{}/files?uploadType=multipart&fields=id,modifiedTime",
             upload_base.trim_end_matches('/'),
         );
         client
@@ -785,23 +802,24 @@ pub(crate) async fn drive_push_with_endpoints(
             "Tải lên Google Drive thất bại ({status}): {body}"
         )));
     }
-    Ok(())
+
+    let uploaded_meta = resp.json::<DriveFileEntry>().await.ok();
+    Ok(uploaded_meta.and_then(|m| m.modified_time))
 }
 
 pub(crate) async fn drive_pull_with_endpoints(
     client: &reqwest::Client,
     api_base: &str,
     access_token: &str,
-) -> AppResult<String> {
-    let file_id = find_backup_file_meta(client, api_base, access_token)
+) -> AppResult<(String, Option<String>)> {
+    let meta = find_backup_file_meta(client, api_base, access_token)
         .await?
-        .map(|f| f.id)
         .ok_or_else(|| AppError::NotFound("Chưa có bản sao lưu nào trên Google Drive.".into()))?;
 
     let url = format!(
         "{}/files/{}?alt=media",
         api_base.trim_end_matches('/'),
-        percent_encode(&file_id),
+        percent_encode(&meta.id),
     );
     let resp = client
         .get(&url)
@@ -818,12 +836,14 @@ pub(crate) async fn drive_pull_with_endpoints(
         )));
     }
 
-    resp.text()
+    let body = resp
+        .text()
         .await
-        .map_err(|e| AppError::Internal(format!("Không đọc được dữ liệu backup: {e}")))
+        .map_err(|e| AppError::Internal(format!("Không đọc được dữ liệu backup: {e}")))?;
+    Ok((body, meta.modified_time))
 }
 
-pub async fn drive_push_backup(access_token: &str, json_body: &str) -> AppResult<()> {
+pub async fn drive_push_backup(access_token: &str, json_body: &str) -> AppResult<Option<String>> {
     let client = build_client(30)?;
     drive_push_with_endpoints(
         &client,
@@ -835,7 +855,7 @@ pub async fn drive_push_backup(access_token: &str, json_body: &str) -> AppResult
     .await
 }
 
-pub async fn drive_pull_backup(access_token: &str) -> AppResult<String> {
+pub async fn drive_pull_backup(access_token: &str) -> AppResult<(String, Option<String>)> {
     let client = build_client(30)?;
     drive_pull_with_endpoints(&client, GOOGLE_DRIVE_API_BASE, access_token).await
 }
@@ -945,6 +965,7 @@ mod tests {
                 refresh_token: "1//rt".into(),
                 expires_at: 100,
                 user_email: "u@example.com".into(),
+                ..Default::default()
             };
             let updated = refresh_settings_token_with_endpoint(&client, &refresh_url, &settings)
                 .await
@@ -964,12 +985,22 @@ mod tests {
             // 1) Empty file list -> multipart POST create
             let (list_url, list_rx) =
                 spawn_one_shot("200 OK", "application/json", br#"{"files":[]}"#.to_vec());
-            let (upload_url, upload_rx) =
-                spawn_one_shot("200 OK", "application/json", br#"{"id":"file_1"}"#.to_vec());
+            let (upload_url, upload_rx) = spawn_one_shot(
+                "200 OK",
+                "application/json",
+                br#"{"id":"file_1","modifiedTime":"2026-11-18T12:00:00Z"}"#.to_vec(),
+            );
 
-            drive_push_with_endpoints(&client, &list_url, &upload_url, "tok1", r#"{"decks":[]}"#)
-                .await
-                .expect("push create");
+            let mod_time = drive_push_with_endpoints(
+                &client,
+                &list_url,
+                &upload_url,
+                "tok1",
+                r#"{"decks":[]}"#,
+            )
+            .await
+            .expect("push create");
+            assert_eq!(mod_time.as_deref(), Some("2026-11-18T12:00:00Z"));
             let list_req = list_rx.recv().expect("list captured");
             let upload_req = upload_rx.recv().expect("upload captured");
             assert!(list_req.request_line.contains("spaces=appDataFolder"));
@@ -1011,7 +1042,7 @@ mod tests {
             let handle = std::thread::spawn(move || {
                 let mut requests = Vec::new();
                 for (idx, body) in [
-                    r#"{"files":[{"id":"file_42"}]}"#,
+                    r#"{"files":[{"id":"file_42","modifiedTime":"2026-11-18T12:30:00Z"}]}"#,
                     r#"{"version":1,"decks":[]}"#,
                 ]
                 .iter()
@@ -1032,10 +1063,11 @@ mod tests {
                 requests
             });
 
-            let downloaded = drive_pull_with_endpoints(&client, &api_base, "tok1")
+            let (downloaded, mod_time) = drive_pull_with_endpoints(&client, &api_base, "tok1")
                 .await
                 .expect("pull ok");
             assert_eq!(downloaded, r#"{"version":1,"decks":[]}"#);
+            assert_eq!(mod_time.as_deref(), Some("2026-11-18T12:30:00Z"));
             let reqs = handle.join().expect("join");
             assert!(reqs[0].contains("spaces=appDataFolder"));
             assert!(reqs[1].contains("/files/file_42?alt=media"));
@@ -1169,5 +1201,23 @@ mod tests {
         let session = take_pending_session(&pending).expect("take");
         assert_eq!(session.client_id, "my_cid");
         assert_eq!(session.client_secret, "my_sec");
+    }
+
+    #[test]
+    fn check_push_conflict_detects_remote_changes() {
+        // No remote file yet -> safe to push
+        assert!(!check_push_conflict(None, ""));
+        // Matches last synced -> safe to push
+        assert!(!check_push_conflict(
+            Some("2026-11-18T12:00:00Z"),
+            "2026-11-18T12:00:00Z"
+        ));
+        // Unsynced device vs existing remote file -> conflict
+        assert!(check_push_conflict(Some("2026-11-18T12:00:00Z"), ""));
+        // Remote newer/different -> conflict
+        assert!(check_push_conflict(
+            Some("2026-11-18T13:00:00Z"),
+            "2026-11-18T12:00:00Z"
+        ));
     }
 }

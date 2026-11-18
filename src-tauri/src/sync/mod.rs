@@ -1,4 +1,5 @@
 pub mod gdrive;
+pub mod snapshots;
 
 use chrono::Utc;
 use rusqlite::{Connection, params};

@@ -1,12 +1,17 @@
-use tauri::State;
+use tauri::{AppHandle, State};
 
 use crate::db::{DbState, settings_repo};
 use crate::error::{AppError, AppResult};
 use crate::models::{
-    BackupRestoreReport, GoogleDriveBackupInfo, GoogleDriveStatus, GoogleOAuthStart, WebDavSettings,
+    BackupRestoreReport, GoogleDriveBackupInfo, GoogleDrivePushResult, GoogleDriveStatus,
+    GoogleOAuthStart, LocalBackupEntry, WebDavSettings,
 };
 use crate::sync;
 use crate::sync::gdrive::PendingGoogleOAuth;
+use crate::sync::snapshots::{
+    MAX_LOCAL_SNAPSHOTS, backup_dir, create_snapshot_in_dir, list_snapshots_in_dir,
+    read_snapshot_in_dir,
+};
 
 #[tauri::command]
 pub fn export_backup(db: State<'_, DbState>) -> AppResult<String> {
@@ -17,10 +22,16 @@ pub fn export_backup(db: State<'_, DbState>) -> AppResult<String> {
 }
 
 #[tauri::command]
-pub fn import_backup(db: State<'_, DbState>, json_str: String) -> AppResult<BackupRestoreReport> {
+pub fn import_backup(
+    app: AppHandle,
+    db: State<'_, DbState>,
+    json_str: String,
+) -> AppResult<BackupRestoreReport> {
+    let dir = backup_dir(&app)?;
     let mut conn =
         db.0.lock()
             .map_err(|_| AppError::Internal("Database lock poisoned".into()))?;
+    let _ = create_snapshot_in_dir(&dir, &conn, "pre-restore", MAX_LOCAL_SNAPSHOTS)?;
     sync::import_backup_json(&mut conn, &json_str)
 }
 
@@ -55,7 +66,10 @@ pub async fn sync_webdav_push(db: State<'_, DbState>) -> AppResult<()> {
 }
 
 #[tauri::command]
-pub async fn sync_webdav_pull(db: State<'_, DbState>) -> AppResult<BackupRestoreReport> {
+pub async fn sync_webdav_pull(
+    app: AppHandle,
+    db: State<'_, DbState>,
+) -> AppResult<BackupRestoreReport> {
     let settings = {
         let conn =
             db.0.lock()
@@ -63,9 +77,11 @@ pub async fn sync_webdav_pull(db: State<'_, DbState>) -> AppResult<BackupRestore
         settings_repo::get_webdav_settings(&conn)?
     };
     let json_str = sync::webdav_pull(&settings).await?;
+    let dir = backup_dir(&app)?;
     let mut conn =
         db.0.lock()
             .map_err(|_| AppError::Internal("Database lock poisoned".into()))?;
+    let _ = create_snapshot_in_dir(&dir, &conn, "pre-restore", MAX_LOCAL_SNAPSHOTS)?;
     sync::import_backup_json(&mut conn, &json_str)
 }
 
@@ -122,7 +138,10 @@ pub fn google_drive_cancel_login(pending: State<'_, PendingGoogleOAuth>) -> AppR
 }
 
 #[tauri::command]
-pub async fn sync_google_drive_push(db: State<'_, DbState>) -> AppResult<()> {
+pub async fn sync_google_drive_push(
+    db: State<'_, DbState>,
+    force: Option<bool>,
+) -> AppResult<GoogleDrivePushResult> {
     let (settings, payload) = {
         let conn =
             db.0.lock()
@@ -132,35 +151,120 @@ pub async fn sync_google_drive_push(db: State<'_, DbState>) -> AppResult<()> {
             sync::export_backup_json(&conn)?,
         )
     };
-    let (updated, changed) = sync::gdrive::refresh_access_token_if_needed(settings).await?;
+    let (mut updated, changed) = sync::gdrive::refresh_access_token_if_needed(settings).await?;
     if changed {
         let conn =
             db.0.lock()
                 .map_err(|_| AppError::Internal("Database lock poisoned".into()))?;
         settings_repo::save_google_drive_settings(&conn, &updated)?;
     }
-    sync::gdrive::drive_push_backup(&updated.access_token, &payload).await
+
+    if !force.unwrap_or(false) {
+        let info = sync::gdrive::drive_get_backup_info(&updated.access_token).await?;
+        if info.exists
+            && sync::gdrive::check_push_conflict(
+                info.modified_time.as_deref(),
+                &updated.last_synced_remote_modified,
+            )
+        {
+            return Ok(GoogleDrivePushResult {
+                pushed: false,
+                conflict: true,
+                remote_modified_time: info.modified_time,
+            });
+        }
+    }
+
+    let remote_modified_time =
+        sync::gdrive::drive_push_backup(&updated.access_token, &payload).await?;
+    if let Some(ref mod_time) = remote_modified_time {
+        updated.last_synced_remote_modified = mod_time.clone();
+        let conn =
+            db.0.lock()
+                .map_err(|_| AppError::Internal("Database lock poisoned".into()))?;
+        settings_repo::save_google_drive_settings(&conn, &updated)?;
+    }
+
+    Ok(GoogleDrivePushResult {
+        pushed: true,
+        conflict: false,
+        remote_modified_time,
+    })
 }
 
 #[tauri::command]
-pub async fn sync_google_drive_pull(db: State<'_, DbState>) -> AppResult<BackupRestoreReport> {
+pub async fn sync_google_drive_pull(
+    app: AppHandle,
+    db: State<'_, DbState>,
+) -> AppResult<BackupRestoreReport> {
     let settings = {
         let conn =
             db.0.lock()
                 .map_err(|_| AppError::Internal("Database lock poisoned".into()))?;
         settings_repo::get_google_drive_settings(&conn)?
     };
-    let (updated, changed) = sync::gdrive::refresh_access_token_if_needed(settings).await?;
+    let (mut updated, changed) = sync::gdrive::refresh_access_token_if_needed(settings).await?;
     if changed {
         let conn =
             db.0.lock()
                 .map_err(|_| AppError::Internal("Database lock poisoned".into()))?;
         settings_repo::save_google_drive_settings(&conn, &updated)?;
     }
-    let json_str = sync::gdrive::drive_pull_backup(&updated.access_token).await?;
+    let (json_str, mod_time) = sync::gdrive::drive_pull_backup(&updated.access_token).await?;
+    let dir = backup_dir(&app)?;
     let mut conn =
         db.0.lock()
             .map_err(|_| AppError::Internal("Database lock poisoned".into()))?;
+    let _ = create_snapshot_in_dir(&dir, &conn, "pre-restore", MAX_LOCAL_SNAPSHOTS)?;
+    let report = sync::import_backup_json(&mut conn, &json_str)?;
+    if let Some(mt) = mod_time {
+        updated.last_synced_remote_modified = mt;
+        settings_repo::save_google_drive_settings(&conn, &updated)?;
+    }
+    Ok(report)
+}
+
+#[tauri::command]
+pub fn google_drive_set_auto_sync(
+    db: State<'_, DbState>,
+    enabled: bool,
+) -> AppResult<GoogleDriveStatus> {
+    let conn =
+        db.0.lock()
+            .map_err(|_| AppError::Internal("Database lock poisoned".into()))?;
+    sync::gdrive::set_auto_sync(&conn, enabled)
+}
+
+#[tauri::command]
+pub fn list_local_backups(app: AppHandle) -> AppResult<Vec<LocalBackupEntry>> {
+    let dir = backup_dir(&app)?;
+    list_snapshots_in_dir(&dir)
+}
+
+#[tauri::command]
+pub fn create_local_backup(
+    app: AppHandle,
+    db: State<'_, DbState>,
+) -> AppResult<Option<LocalBackupEntry>> {
+    let dir = backup_dir(&app)?;
+    let conn =
+        db.0.lock()
+            .map_err(|_| AppError::Internal("Database lock poisoned".into()))?;
+    create_snapshot_in_dir(&dir, &conn, "auto", MAX_LOCAL_SNAPSHOTS)
+}
+
+#[tauri::command]
+pub fn restore_local_backup(
+    app: AppHandle,
+    db: State<'_, DbState>,
+    filename: String,
+) -> AppResult<BackupRestoreReport> {
+    let dir = backup_dir(&app)?;
+    let json_str = read_snapshot_in_dir(&dir, &filename)?;
+    let mut conn =
+        db.0.lock()
+            .map_err(|_| AppError::Internal("Database lock poisoned".into()))?;
+    let _ = create_snapshot_in_dir(&dir, &conn, "pre-restore", MAX_LOCAL_SNAPSHOTS)?;
     sync::import_backup_json(&mut conn, &json_str)
 }
 

@@ -1,8 +1,19 @@
 <script lang="ts">
   import { openUrl } from "@tauri-apps/plugin-opener";
-  import { CloudDownload, CloudUpload, Download, LogIn, LogOut, Upload, X } from "@lucide/svelte";
+  import {
+    CloudDownload,
+    CloudUpload,
+    Download,
+    History,
+    LogIn,
+    LogOut,
+    RotateCcw,
+    ShieldAlert,
+    Upload,
+    X,
+  } from "@lucide/svelte";
   import { toast } from "$lib/shared/toast.svelte";
-  import type { GoogleDriveBackupInfo } from "$lib/shared/types";
+  import type { GoogleDriveBackupInfo, LocalBackupEntry } from "$lib/shared/types";
   import { syncApi } from "./api";
 
   interface Props {
@@ -23,6 +34,9 @@
   let showGdriveConfig = $state(false);
   let gdriveLoggingIn = $state(false);
   let gdriveBackupInfo = $state<GoogleDriveBackupInfo | null>(null);
+  let gdriveAutoSync = $state(false);
+  let driveConflictTime = $state<string | null>(null);
+  let localBackups = $state<LocalBackupEntry[]>([]);
   let loadingBackupInfo = $state(false);
   let busy = $state(false);
 
@@ -34,6 +48,14 @@
       gdriveBackupInfo = null;
     } finally {
       loadingBackupInfo = false;
+    }
+  }
+
+  async function refreshLocalBackups() {
+    try {
+      localBackups = await syncApi.listLocalBackups();
+    } catch {
+      localBackups = [];
     }
   }
 
@@ -53,6 +75,7 @@
 
   $effect(() => {
     if (open) {
+      driveConflictTime = null;
       void syncApi.getWebDavSettings().then((s) => {
         url = s.url;
         username = s.username;
@@ -62,6 +85,7 @@
         gdriveConnected = st.connected;
         gdriveEmail = st.userEmail;
         gdriveClientId = st.clientId;
+        gdriveAutoSync = st.autoSync;
         showGdriveConfig = !st.clientId;
         if (st.connected) {
           void refreshGoogleBackupInfo();
@@ -69,6 +93,7 @@
           gdriveBackupInfo = null;
         }
       });
+      void refreshLocalBackups();
     } else if (gdriveLoggingIn) {
       gdriveLoggingIn = false;
       busy = false;
@@ -86,6 +111,7 @@
       gdriveConnected = st.connected;
       gdriveEmail = st.userEmail;
       gdriveClientId = st.clientId;
+      gdriveAutoSync = st.autoSync;
       gdriveClientSecret = "";
       showGdriveConfig = false;
       toast.success(
@@ -113,7 +139,9 @@
       const st = await syncApi.logoutGoogleDrive();
       gdriveConnected = st.connected;
       gdriveEmail = st.userEmail;
+      gdriveAutoSync = st.autoSync;
       gdriveBackupInfo = null;
+      driveConflictTime = null;
       toast.info("Đã đăng xuất Google Drive.");
     } catch (e) {
       toast.error(e);
@@ -122,10 +150,30 @@
     }
   }
 
-  async function handleGooglePush() {
+  async function handleToggleAutoSync() {
+    try {
+      const st = await syncApi.setGoogleDriveAutoSync(!gdriveAutoSync);
+      gdriveAutoSync = st.autoSync;
+      toast.success(
+        st.autoSync
+          ? "Đã bật tự động sao lưu lên Google Drive khi có thay đổi."
+          : "Đã tắt tự động sao lưu Google Drive.",
+      );
+    } catch (e) {
+      toast.error(e);
+    }
+  }
+
+  async function handleGooglePush(force = false) {
     busy = true;
     try {
-      await syncApi.pushGoogleDrive();
+      const res = await syncApi.pushGoogleDrive(force);
+      if (res.conflict) {
+        driveConflictTime = res.remoteModifiedTime;
+        toast.warning("Google Drive đang có bản sao lưu mới hơn từ thiết bị khác.");
+        return;
+      }
+      driveConflictTime = null;
       toast.success("Đã sao lưu dữ liệu lên Google Drive thành công!");
       void refreshGoogleBackupInfo();
     } catch (e) {
@@ -139,9 +187,43 @@
     busy = true;
     try {
       const report = await syncApi.pullGoogleDrive();
+      driveConflictTime = null;
       toast.success(
         `Đã khôi phục từ Google Drive: ${report.decks} bộ thẻ, ${report.notes} ghi chú.`,
       );
+      void refreshGoogleBackupInfo();
+      void refreshLocalBackups();
+      onRestored();
+    } catch (e) {
+      toast.error(e);
+    } finally {
+      busy = false;
+    }
+  }
+
+  async function handleCreateLocalBackup() {
+    busy = true;
+    try {
+      const created = await syncApi.createLocalBackup();
+      if (created) {
+        toast.success("Đã tạo bản sao lưu an toàn trên máy!");
+      } else {
+        toast.info("Chưa có dữ liệu thẻ/ghi chú để sao lưu.");
+      }
+      void refreshLocalBackups();
+    } catch (e) {
+      toast.error(e);
+    } finally {
+      busy = false;
+    }
+  }
+
+  async function handleRestoreLocalBackup(filename: string) {
+    busy = true;
+    try {
+      const report = await syncApi.restoreLocalBackup(filename);
+      toast.success(`Đã khôi phục snapshot: ${report.decks} bộ thẻ, ${report.notes} ghi chú.`);
+      void refreshLocalBackups();
       onRestored();
     } catch (e) {
       toast.error(e);
@@ -294,11 +376,52 @@
           {/if}
 
           {#if gdriveConnected}
+            {#if driveConflictTime}
+              <div class="space-y-2 rounded-xl border border-amber-500/40 bg-amber-500/10 p-3">
+                <div class="flex items-start gap-2 text-xs text-amber-200">
+                  <ShieldAlert class="mt-0.5 h-4 w-4 shrink-0 text-amber-400" />
+                  <p>
+                    Google Drive có bản sao lưu mới hơn (lúc
+                    <strong>{formatBackupTime(driveConflictTime)}</strong>) từ thiết bị khác. Để
+                    tránh ghi đè mất dữ liệu, hãy chọn hành động:
+                  </p>
+                </div>
+                <div class="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onclick={handleGooglePull}
+                    class="rounded-lg bg-emerald-600 px-3 py-1.5 text-[11px] font-semibold text-white hover:bg-emerald-500 disabled:opacity-50"
+                  >
+                    Kéo từ Drive về máy (Khuyên dùng)
+                  </button>
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onclick={() => handleGooglePush(true)}
+                    class="rounded-lg border border-amber-500/50 px-3 py-1.5 text-[11px] font-medium text-amber-200 hover:bg-amber-500/20 disabled:opacity-50"
+                  >
+                    Vẫn ghi đè lên Drive
+                  </button>
+                </div>
+              </div>
+            {/if}
+
+            <label class="flex cursor-pointer items-center justify-between gap-2 pt-0.5 text-xs">
+              <span class="text-zinc-300">Tự động sao lưu lên Drive khi có thay đổi</span>
+              <input
+                type="checkbox"
+                checked={gdriveAutoSync}
+                onchange={handleToggleAutoSync}
+                class="h-4 w-4 rounded border-zinc-700 bg-zinc-900 accent-indigo-500"
+              />
+            </label>
+
             <div class="flex flex-wrap gap-2.5 pt-1">
               <button
                 type="button"
                 disabled={busy}
-                onclick={handleGooglePush}
+                onclick={() => handleGooglePush(false)}
                 class="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-indigo-500/40 bg-indigo-500/15 py-2 text-xs font-medium text-indigo-300 hover:bg-indigo-500/25 disabled:opacity-50"
               >
                 <CloudUpload class="h-3.5 w-3.5" />
@@ -374,6 +497,61 @@
               <input type="file" accept=".json" onchange={handleImportJson} class="hidden" />
             </label>
           </div>
+        </div>
+
+        <!-- Local Safety Snapshots -->
+        <div class="space-y-2.5 rounded-xl border border-zinc-800 bg-zinc-950/60 p-4">
+          <div class="flex items-center justify-between gap-2">
+            <div class="flex items-center gap-1.5">
+              <History class="h-3.5 w-3.5 text-indigo-400" />
+              <h3 class="text-xs font-semibold text-zinc-200 uppercase">
+                Bản sao lưu an toàn trên máy
+              </h3>
+            </div>
+            <button
+              type="button"
+              disabled={busy}
+              onclick={handleCreateLocalBackup}
+              class="text-[11px] font-medium text-indigo-400 hover:text-indigo-300 disabled:opacity-50"
+            >
+              + Chụp ngay
+            </button>
+          </div>
+          <p class="text-[11px] text-zinc-400">
+            Tự động chụp sau khi học/sửa thẻ và ngay trước mỗi lần khôi phục (giữ 10 bản mới nhất).
+          </p>
+
+          {#if localBackups.length === 0}
+            <p class="text-[11px] text-zinc-500">Chưa có bản snapshot nào trên máy.</p>
+          {:else}
+            <div class="max-h-36 space-y-1.5 overflow-y-auto pr-1">
+              {#each localBackups as snap (snap.filename)}
+                <div
+                  class="flex items-center justify-between gap-2 rounded-lg border border-zinc-800 bg-zinc-900/70 px-2.5 py-1.5 text-[11px]"
+                >
+                  <div class="min-w-0">
+                    <span class="font-medium text-zinc-200">
+                      {new Date(snap.createdAt).toLocaleString("vi-VN")}
+                    </span>
+                    <span class="ml-1.5 text-zinc-400">
+                      ({snap.reason === "pre-restore" ? "Trước khôi phục" : "Tự động"} · {formatBytes(
+                        snap.sizeBytes,
+                      )})
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onclick={() => handleRestoreLocalBackup(snap.filename)}
+                    class="inline-flex shrink-0 items-center gap-1 rounded-md border border-zinc-700 px-2 py-1 text-[11px] text-zinc-200 hover:bg-zinc-800 disabled:opacity-50"
+                  >
+                    <RotateCcw class="h-3 w-3" />
+                    Khôi phục
+                  </button>
+                </div>
+              {/each}
+            </div>
+          {/if}
         </div>
 
         <!-- WebDAV Sync -->

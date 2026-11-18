@@ -269,6 +269,10 @@ pub struct GoogleDriveSettings {
     pub refresh_token: String,
     pub expires_at: i64,
     pub user_email: String,
+    #[serde(default)]
+    pub last_synced_remote_modified: String,
+    #[serde(default)]
+    pub auto_sync: bool,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -278,6 +282,7 @@ pub struct GoogleDriveStatus {
     pub user_email: String,
     pub client_id: String,
     pub has_client_secret: bool,
+    pub auto_sync: bool,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -292,6 +297,23 @@ pub struct GoogleDriveBackupInfo {
     pub exists: bool,
     pub modified_time: Option<String>,
     pub size_bytes: Option<u64>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GoogleDrivePushResult {
+    pub pushed: bool,
+    pub conflict: bool,
+    pub remote_modified_time: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LocalBackupEntry {
+    pub filename: String,
+    pub created_at: i64,
+    pub size_bytes: u64,
+    pub reason: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

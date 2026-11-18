@@ -83,6 +83,10 @@ pub fn run() {
             sync_cmd::sync_google_drive_push,
             sync_cmd::sync_google_drive_pull,
             sync_cmd::google_drive_backup_info,
+            sync_cmd::google_drive_set_auto_sync,
+            sync_cmd::list_local_backups,
+            sync_cmd::create_local_backup,
+            sync_cmd::restore_local_backup,
             reader_cmd::parse_epub,
             reader_cmd::load_reader_url,
         ])

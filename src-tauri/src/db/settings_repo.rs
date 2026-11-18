@@ -106,6 +106,11 @@ pub fn get_google_drive_settings(conn: &Connection) -> AppResult<GoogleDriveSett
         .and_then(|v| v.parse::<i64>().ok())
         .unwrap_or(0);
     let user_email = get_key(conn, "gdrive_user_email")?.unwrap_or_default();
+    let last_synced_remote_modified =
+        get_key(conn, "gdrive_last_synced_remote_modified")?.unwrap_or_default();
+    let auto_sync = get_key(conn, "gdrive_auto_sync")?
+        .map(|v| v == "1" || v.eq_ignore_ascii_case("true"))
+        .unwrap_or(false);
     Ok(GoogleDriveSettings {
         client_id,
         client_secret,
@@ -113,6 +118,8 @@ pub fn get_google_drive_settings(conn: &Connection) -> AppResult<GoogleDriveSett
         refresh_token,
         expires_at,
         user_email,
+        last_synced_remote_modified,
+        auto_sync,
     })
 }
 
@@ -126,6 +133,16 @@ pub fn save_google_drive_settings(
     set_key(conn, "gdrive_refresh_token", settings.refresh_token.trim())?;
     set_key(conn, "gdrive_expires_at", &settings.expires_at.to_string())?;
     set_key(conn, "gdrive_user_email", settings.user_email.trim())?;
+    set_key(
+        conn,
+        "gdrive_last_synced_remote_modified",
+        settings.last_synced_remote_modified.trim(),
+    )?;
+    set_key(
+        conn,
+        "gdrive_auto_sync",
+        if settings.auto_sync { "1" } else { "0" },
+    )?;
     Ok(())
 }
 
@@ -231,6 +248,8 @@ mod tests {
                 refresh_token: " 1//0gxyz ".into(),
                 expires_at: 1_750_000_000,
                 user_email: " user@example.com ".into(),
+                last_synced_remote_modified: " 2026-11-18T12:00:00Z ".into(),
+                auto_sync: true,
             },
         )
         .expect("save gdrive");
@@ -242,5 +261,7 @@ mod tests {
         assert_eq!(loaded.refresh_token, "1//0gxyz");
         assert_eq!(loaded.expires_at, 1_750_000_000);
         assert_eq!(loaded.user_email, "user@example.com");
+        assert_eq!(loaded.last_synced_remote_modified, "2026-11-18T12:00:00Z");
+        assert!(loaded.auto_sync);
     }
 }

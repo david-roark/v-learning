@@ -2,8 +2,10 @@ import { invokeCmd } from "$lib/shared/tauri";
 import type {
   BackupRestoreReport,
   GoogleDriveBackupInfo,
+  GoogleDrivePushResult,
   GoogleDriveStatus,
   GoogleOAuthStart,
+  LocalBackupEntry,
   WebDavSettings,
 } from "$lib/shared/types";
 
@@ -24,7 +26,14 @@ export const syncApi = {
   completeGoogleDriveLogin: () => invokeCmd<GoogleDriveStatus>("google_drive_complete_login"),
   cancelGoogleDriveLogin: () => invokeCmd<void>("google_drive_cancel_login"),
   logoutGoogleDrive: () => invokeCmd<GoogleDriveStatus>("google_drive_logout"),
-  pushGoogleDrive: () => invokeCmd<void>("sync_google_drive_push"),
+  pushGoogleDrive: (force = false) =>
+    invokeCmd<GoogleDrivePushResult>("sync_google_drive_push", { force }),
   pullGoogleDrive: () => invokeCmd<BackupRestoreReport>("sync_google_drive_pull"),
   getGoogleDriveBackupInfo: () => invokeCmd<GoogleDriveBackupInfo>("google_drive_backup_info"),
+  setGoogleDriveAutoSync: (enabled: boolean) =>
+    invokeCmd<GoogleDriveStatus>("google_drive_set_auto_sync", { enabled }),
+  listLocalBackups: () => invokeCmd<LocalBackupEntry[]>("list_local_backups"),
+  createLocalBackup: () => invokeCmd<LocalBackupEntry | null>("create_local_backup"),
+  restoreLocalBackup: (filename: string) =>
+    invokeCmd<BackupRestoreReport>("restore_local_backup", { filename }),
 };

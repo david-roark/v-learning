@@ -153,6 +153,7 @@ export interface GoogleDriveStatus {
   userEmail: string;
   clientId: string;
   hasClientSecret: boolean;
+  autoSync: boolean;
 }
 
 export interface GoogleOAuthStart {
@@ -163,6 +164,19 @@ export interface GoogleDriveBackupInfo {
   exists: boolean;
   modifiedTime: string | null;
   sizeBytes: number | null;
+}
+
+export interface GoogleDrivePushResult {
+  pushed: boolean;
+  conflict: boolean;
+  remoteModifiedTime: string | null;
+}
+
+export interface LocalBackupEntry {
+  filename: string;
+  createdAt: number;
+  sizeBytes: number;
+  reason: string;
 }
 
 export interface ApkgImportReport {
