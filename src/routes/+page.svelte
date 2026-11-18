@@ -90,6 +90,13 @@
 
   onMount(() => {
     refreshDashboard();
+    const onRestored = () => {
+      void refreshDashboard();
+    };
+    window.addEventListener("vlearning:data-restored", onRestored);
+    return () => {
+      window.removeEventListener("vlearning:data-restored", onRestored);
+    };
   });
 </script>
 

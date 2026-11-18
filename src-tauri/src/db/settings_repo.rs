@@ -111,6 +111,9 @@ pub fn get_google_drive_settings(conn: &Connection) -> AppResult<GoogleDriveSett
     let auto_sync = get_key(conn, "gdrive_auto_sync")?
         .map(|v| v == "1" || v.eq_ignore_ascii_case("true"))
         .unwrap_or(false);
+    let local_dirty = get_key(conn, "gdrive_local_dirty")?
+        .map(|v| v == "1" || v.eq_ignore_ascii_case("true"))
+        .unwrap_or(false);
     Ok(GoogleDriveSettings {
         client_id,
         client_secret,
@@ -120,7 +123,12 @@ pub fn get_google_drive_settings(conn: &Connection) -> AppResult<GoogleDriveSett
         user_email,
         last_synced_remote_modified,
         auto_sync,
+        local_dirty,
     })
+}
+
+pub fn set_google_drive_local_dirty(conn: &Connection, dirty: bool) -> AppResult<()> {
+    set_key(conn, "gdrive_local_dirty", if dirty { "1" } else { "0" })
 }
 
 pub fn save_google_drive_settings(
@@ -142,6 +150,11 @@ pub fn save_google_drive_settings(
         conn,
         "gdrive_auto_sync",
         if settings.auto_sync { "1" } else { "0" },
+    )?;
+    set_key(
+        conn,
+        "gdrive_local_dirty",
+        if settings.local_dirty { "1" } else { "0" },
     )?;
     Ok(())
 }
@@ -250,6 +263,7 @@ mod tests {
                 user_email: " user@example.com ".into(),
                 last_synced_remote_modified: " 2026-11-18T12:00:00Z ".into(),
                 auto_sync: true,
+                local_dirty: true,
             },
         )
         .expect("save gdrive");
@@ -263,5 +277,6 @@ mod tests {
         assert_eq!(loaded.user_email, "user@example.com");
         assert_eq!(loaded.last_synced_remote_modified, "2026-11-18T12:00:00Z");
         assert!(loaded.auto_sync);
+        assert!(loaded.local_dirty);
     }
 }

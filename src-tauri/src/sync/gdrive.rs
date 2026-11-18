@@ -174,6 +174,7 @@ pub fn logout(conn: &Connection) -> AppResult<GoogleDriveStatus> {
     settings.user_email.clear();
     settings.last_synced_remote_modified.clear();
     settings.auto_sync = false;
+    settings.local_dirty = false;
     settings_repo::save_google_drive_settings(conn, &settings)?;
     Ok(status_from_settings(&settings))
 }

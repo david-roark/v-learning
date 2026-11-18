@@ -2,7 +2,10 @@
   import "../app.css";
   import { onMount } from "svelte";
   import { appearance, applyAppearance } from "$lib/features/appearance/appearance.svelte";
-  import { flushPendingAutoBackup } from "$lib/features/sync/autoBackup.svelte";
+  import {
+    flushPendingAutoBackup,
+    runStartupGoogleDriveSync,
+  } from "$lib/features/sync/autoBackup.svelte";
   import ToastHost from "$lib/shared/components/ToastHost.svelte";
 
   let { children } = $props();
@@ -12,6 +15,7 @@
   });
 
   onMount(() => {
+    void runStartupGoogleDriveSync();
     const onHide = () => {
       if (document.visibilityState === "hidden") {
         flushPendingAutoBackup();

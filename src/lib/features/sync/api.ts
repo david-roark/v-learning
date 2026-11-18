@@ -3,6 +3,7 @@ import type {
   BackupRestoreReport,
   GoogleDriveBackupInfo,
   GoogleDrivePushResult,
+  GoogleDriveStartupSyncResult,
   GoogleDriveStatus,
   GoogleOAuthStart,
   LocalBackupEntry,
@@ -29,6 +30,10 @@ export const syncApi = {
   pushGoogleDrive: (force = false) =>
     invokeCmd<GoogleDrivePushResult>("sync_google_drive_push", { force }),
   pullGoogleDrive: () => invokeCmd<BackupRestoreReport>("sync_google_drive_pull"),
+  mergeGoogleDrive: () => invokeCmd<BackupRestoreReport>("sync_google_drive_merge"),
+  markGoogleDriveDirty: () => invokeCmd<void>("google_drive_mark_dirty"),
+  startupGoogleDriveSync: () =>
+    invokeCmd<GoogleDriveStartupSyncResult>("google_drive_startup_sync"),
   getGoogleDriveBackupInfo: () => invokeCmd<GoogleDriveBackupInfo>("google_drive_backup_info"),
   setGoogleDriveAutoSync: (enabled: boolean) =>
     invokeCmd<GoogleDriveStatus>("google_drive_set_auto_sync", { enabled }),

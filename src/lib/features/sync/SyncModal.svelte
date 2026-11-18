@@ -15,6 +15,7 @@
   import { toast } from "$lib/shared/toast.svelte";
   import type { GoogleDriveBackupInfo, LocalBackupEntry } from "$lib/shared/types";
   import { syncApi } from "./api";
+  import { getPendingDriveConflict, setPendingDriveConflict } from "./autoBackup.svelte";
 
   interface Props {
     open: boolean;
@@ -75,7 +76,7 @@
 
   $effect(() => {
     if (open) {
-      driveConflictTime = null;
+      driveConflictTime = getPendingDriveConflict();
       void syncApi.getWebDavSettings().then((s) => {
         url = s.url;
         username = s.username;
@@ -170,10 +171,12 @@
       const res = await syncApi.pushGoogleDrive(force);
       if (res.conflict) {
         driveConflictTime = res.remoteModifiedTime;
+        setPendingDriveConflict(res.remoteModifiedTime);
         toast.warning("Google Drive đang có bản sao lưu mới hơn từ thiết bị khác.");
         return;
       }
       driveConflictTime = null;
+      setPendingDriveConflict(null);
       toast.success("Đã sao lưu dữ liệu lên Google Drive thành công!");
       void refreshGoogleBackupInfo();
     } catch (e) {
@@ -188,8 +191,28 @@
     try {
       const report = await syncApi.pullGoogleDrive();
       driveConflictTime = null;
+      setPendingDriveConflict(null);
       toast.success(
         `Đã khôi phục từ Google Drive: ${report.decks} bộ thẻ, ${report.notes} ghi chú.`,
+      );
+      void refreshGoogleBackupInfo();
+      void refreshLocalBackups();
+      onRestored();
+    } catch (e) {
+      toast.error(e);
+    } finally {
+      busy = false;
+    }
+  }
+
+  async function handleGoogleMerge() {
+    busy = true;
+    try {
+      const report = await syncApi.mergeGoogleDrive();
+      driveConflictTime = null;
+      setPendingDriveConflict(null);
+      toast.success(
+        `Đã gộp thông minh 2 máy & đẩy lên Drive: ${report.decks} bộ thẻ, ${report.notes} ghi chú.`,
       );
       void refreshGoogleBackupInfo();
       void refreshLocalBackups();
@@ -390,10 +413,18 @@
                   <button
                     type="button"
                     disabled={busy}
+                    onclick={handleGoogleMerge}
+                    class="rounded-lg bg-indigo-600 px-3 py-1.5 text-[11px] font-semibold text-white hover:bg-indigo-500 disabled:opacity-50"
+                  >
+                    Gộp thông minh (Merge 2 máy)
+                  </button>
+                  <button
+                    type="button"
+                    disabled={busy}
                     onclick={handleGooglePull}
                     class="rounded-lg bg-emerald-600 px-3 py-1.5 text-[11px] font-semibold text-white hover:bg-emerald-500 disabled:opacity-50"
                   >
-                    Kéo từ Drive về máy (Khuyên dùng)
+                    Lấy bản Drive (Ghi đè máy)
                   </button>
                   <button
                     type="button"
@@ -401,7 +432,7 @@
                     onclick={() => handleGooglePush(true)}
                     class="rounded-lg border border-amber-500/50 px-3 py-1.5 text-[11px] font-medium text-amber-200 hover:bg-amber-500/20 disabled:opacity-50"
                   >
-                    Vẫn ghi đè lên Drive
+                    Đẩy bản máy (Ghi đè Drive)
                   </button>
                 </div>
               </div>

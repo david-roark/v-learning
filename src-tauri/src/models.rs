@@ -273,6 +273,8 @@ pub struct GoogleDriveSettings {
     pub last_synced_remote_modified: String,
     #[serde(default)]
     pub auto_sync: bool,
+    #[serde(default)]
+    pub local_dirty: bool,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -304,6 +306,14 @@ pub struct GoogleDriveBackupInfo {
 pub struct GoogleDrivePushResult {
     pub pushed: bool,
     pub conflict: bool,
+    pub remote_modified_time: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GoogleDriveStartupSyncResult {
+    pub action: String,
+    pub report: Option<BackupRestoreReport>,
     pub remote_modified_time: Option<String>,
 }
 

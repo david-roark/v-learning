@@ -1,6 +1,7 @@
 pub mod gdrive;
 pub mod snapshots;
 
+use std::collections::HashMap;
 use std::io::{Read, Write};
 
 use chrono::Utc;
@@ -137,25 +138,92 @@ pub fn export_backup_gzip(conn: &Connection) -> AppResult<Vec<u8>> {
         .map_err(|e| AppError::Internal(format!("Lỗi hoàn tất nén gzip: {e}")))
 }
 
-pub fn import_backup_bytes(conn: &mut Connection, data: &[u8]) -> AppResult<BackupRestoreReport> {
-    if data.starts_with(&[0x1f, 0x8b]) {
+fn decode_backup_bytes(data: &[u8]) -> AppResult<BackupPayload> {
+    let json_str = if data.starts_with(&[0x1f, 0x8b]) {
         let mut decoder = GzDecoder::new(data);
-        let mut json_str = String::new();
+        let mut s = String::new();
         decoder
-            .read_to_string(&mut json_str)
+            .read_to_string(&mut s)
             .map_err(|e| AppError::Validation(format!("File backup gzip không hợp lệ: {e}")))?;
-        import_backup_json(conn, &json_str)
+        s
     } else {
-        let json_str = std::str::from_utf8(data)
-            .map_err(|e| AppError::Validation(format!("File backup UTF-8 không hợp lệ: {e}")))?;
-        import_backup_json(conn, json_str)
-    }
+        std::str::from_utf8(data)
+            .map_err(|e| AppError::Validation(format!("File backup UTF-8 không hợp lệ: {e}")))?
+            .to_string()
+    };
+    serde_json::from_str(&json_str)
+        .map_err(|e| AppError::Validation(format!("File backup JSON không hợp lệ: {e}")))
+}
+
+pub fn import_backup_bytes(conn: &mut Connection, data: &[u8]) -> AppResult<BackupRestoreReport> {
+    let payload = decode_backup_bytes(data)?;
+    apply_backup_payload(conn, &payload)
 }
 
 pub fn import_backup_json(conn: &mut Connection, json_str: &str) -> AppResult<BackupRestoreReport> {
     let payload: BackupPayload = serde_json::from_str(json_str)
         .map_err(|e| AppError::Validation(format!("File backup JSON không hợp lệ: {e}")))?;
+    apply_backup_payload(conn, &payload)
+}
 
+pub fn merge_backup_bytes(conn: &mut Connection, data: &[u8]) -> AppResult<BackupRestoreReport> {
+    let local = build_backup_payload(conn)?;
+    let remote = decode_backup_bytes(data)?;
+
+    let mut decks_map: HashMap<String, Deck> =
+        local.decks.into_iter().map(|d| (d.id.clone(), d)).collect();
+    for d in remote.decks {
+        decks_map.entry(d.id.clone()).or_insert(d);
+    }
+
+    let mut notes_map: HashMap<String, Note> =
+        local.notes.into_iter().map(|n| (n.id.clone(), n)).collect();
+    for n in remote.notes {
+        match notes_map.get(&n.id) {
+            Some(existing) if existing.updated_at >= n.updated_at => {}
+            _ => {
+                notes_map.insert(n.id.clone(), n);
+            }
+        }
+    }
+
+    let mut cards_map: HashMap<String, Card> =
+        local.cards.into_iter().map(|c| (c.id.clone(), c)).collect();
+    for c in remote.cards {
+        match cards_map.get(&c.id) {
+            Some(existing)
+                if (existing.last_review.unwrap_or(0), existing.reps)
+                    >= (c.last_review.unwrap_or(0), c.reps) => {}
+            _ => {
+                cards_map.insert(c.id.clone(), c);
+            }
+        }
+    }
+
+    let mut logs_map: HashMap<String, ReviewLogRow> = local
+        .review_logs
+        .into_iter()
+        .map(|l| (l.id.clone(), l))
+        .collect();
+    for l in remote.review_logs {
+        logs_map.entry(l.id.clone()).or_insert(l);
+    }
+
+    let merged = BackupPayload {
+        version: 1,
+        exported_at: Utc::now().timestamp_millis(),
+        decks: decks_map.into_values().collect(),
+        notes: notes_map.into_values().collect(),
+        cards: cards_map.into_values().collect(),
+        review_logs: logs_map.into_values().collect(),
+    };
+    apply_backup_payload(conn, &merged)
+}
+
+fn apply_backup_payload(
+    conn: &mut Connection,
+    payload: &BackupPayload,
+) -> AppResult<BackupRestoreReport> {
     let tx = conn.transaction()?;
 
     for d in &payload.decks {
@@ -382,6 +450,88 @@ mod tests {
         let mut dst2 = open_in_memory_for_test();
         let rep2 = import_backup_bytes(&mut dst2, pretty.as_bytes()).expect("import plain");
         assert_eq!(rep2.notes, 10);
+    }
+
+    #[test]
+    fn merge_backup_bytes_keeps_freshest_notes_cards_and_unions_logs() {
+        let mut dev_a = open_in_memory_for_test();
+        let mut dev_b = open_in_memory_for_test();
+
+        let deck_a = create_deck(
+            &dev_a,
+            CreateDeckInput {
+                name: "DeckA".into(),
+                description: None,
+                new_cards_per_day: None,
+                desired_retention: None,
+            },
+        )
+        .expect("deck a");
+        create_note(
+            &mut dev_a,
+            CreateNoteInput {
+                deck_id: deck_a.id.clone(),
+                note_type: "vocab".into(),
+                word: "alpha".into(),
+                ipa: None,
+                meaning: "old_meaning".into(),
+                example_sentence: None,
+                collocations: None,
+                tags: None,
+            },
+        )
+        .expect("note alpha");
+
+        // Clone A -> B, then edit alpha on B (newer) and add beta on A
+        let snap_a = export_backup_gzip(&dev_a).expect("snap");
+        import_backup_bytes(&mut dev_b, &snap_a).expect("seed b");
+
+        let b_notes =
+            crate::db::note_repo::list_notes_by_deck(&dev_b, &deck_a.id).expect("b notes");
+        std::thread::sleep(std::time::Duration::from_millis(5));
+        crate::db::note_repo::update_note(
+            &dev_b,
+            crate::models::UpdateNoteInput {
+                id: b_notes[0].id.clone(),
+                word: "alpha".into(),
+                ipa: None,
+                meaning: "newer_meaning_from_b".into(),
+                example_sentence: None,
+                collocations: None,
+                tags: None,
+            },
+        )
+        .expect("update alpha on b");
+
+        create_note(
+            &mut dev_a,
+            CreateNoteInput {
+                deck_id: deck_a.id.clone(),
+                note_type: "vocab".into(),
+                word: "beta".into(),
+                ipa: None,
+                meaning: "from_a".into(),
+                example_sentence: None,
+                collocations: None,
+                tags: None,
+            },
+        )
+        .expect("note beta on a");
+
+        // Merge B's backup into A -> should keep beta from A AND newer alpha meaning from B
+        let snap_b = export_backup_gzip(&dev_b).expect("snap b");
+        let merged = merge_backup_bytes(&mut dev_a, &snap_b).expect("merge");
+        assert_eq!(merged.notes, 2);
+
+        let final_notes =
+            crate::db::note_repo::list_notes_by_deck(&dev_a, &deck_a.id).expect("final");
+        let alpha = final_notes
+            .iter()
+            .find(|n| n.word == "alpha")
+            .expect("alpha");
+        let beta = final_notes.iter().find(|n| n.word == "beta").expect("beta");
+        assert_eq!(alpha.meaning, "newer_meaning_from_b");
+        assert_eq!(beta.meaning, "from_a");
     }
 
     #[test]

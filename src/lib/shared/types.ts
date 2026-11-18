@@ -172,6 +172,12 @@ export interface GoogleDrivePushResult {
   remoteModifiedTime: string | null;
 }
 
+export interface GoogleDriveStartupSyncResult {
+  action: "noop" | "pulled" | "pushed" | "conflict";
+  report: BackupRestoreReport | null;
+  remoteModifiedTime: string | null;
+}
+
 export interface LocalBackupEntry {
   filename: string;
   createdAt: number;
