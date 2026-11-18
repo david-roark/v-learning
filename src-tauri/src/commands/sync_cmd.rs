@@ -23,6 +23,18 @@ pub fn export_backup(db: State<'_, DbState>) -> AppResult<String> {
 }
 
 #[tauri::command]
+pub fn write_backup_file(path: String, json_str: String) -> AppResult<()> {
+    let trimmed = path.trim();
+    if trimmed.is_empty() {
+        return Err(AppError::Validation(
+            "Đường dẫn lưu file không hợp lệ.".into(),
+        ));
+    }
+    std::fs::write(trimmed, json_str.as_bytes())
+        .map_err(|e| AppError::Internal(format!("Không ghi được file backup: {e}")))
+}
+
+#[tauri::command]
 pub fn import_backup(
     app: AppHandle,
     db: State<'_, DbState>,

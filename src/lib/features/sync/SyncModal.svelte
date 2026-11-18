@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { save } from "@tauri-apps/plugin-dialog";
   import { openUrl } from "@tauri-apps/plugin-opener";
   import {
     CloudDownload,
@@ -259,14 +260,15 @@
     busy = true;
     try {
       const json = await syncApi.exportBackup();
-      const blob = new Blob([json], { type: "application/json" });
-      const dlUrl = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = dlUrl;
-      a.download = `vlearning-backup-${new Date().toISOString().slice(0, 10)}.json`;
-      a.click();
-      URL.revokeObjectURL(dlUrl);
-      toast.success("Đã xuất file sao lưu JSON thành công!");
+      const filename = `vlearning-backup-${new Date().toISOString().slice(0, 10)}.json`;
+      const dest = await save({
+        title: "Chọn nơi lưu bản sao lưu JSON",
+        defaultPath: filename,
+        filters: [{ name: "JSON Backup", extensions: ["json"] }],
+      });
+      if (!dest) return;
+      await syncApi.writeBackupFile(dest, json);
+      toast.success(`Đã xuất file sao lưu tại: ${dest}`, 5000);
     } catch (err) {
       toast.error(err);
     } finally {

@@ -12,6 +12,8 @@ import type {
 
 export const syncApi = {
   exportBackup: () => invokeCmd<string>("export_backup"),
+  writeBackupFile: (path: string, jsonStr: string) =>
+    invokeCmd<void>("write_backup_file", { path, jsonStr }),
   importBackup: (jsonStr: string) => invokeCmd<BackupRestoreReport>("import_backup", { jsonStr }),
   getWebDavSettings: () => invokeCmd<WebDavSettings>("get_webdav_settings"),
   saveWebDavSettings: (settings: WebDavSettings) =>
