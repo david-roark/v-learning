@@ -12,7 +12,7 @@
     "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
     "test:fe": "node --test \"src/**/*.test.mjs\"",
     "test:rs": "cargo test --manifest-path src-tauri/Cargo.toml",
-    "test:py": "python3 -m unittest scripts/dict-builder/test_builder.py",
+    "test:py": "python3 -m unittest discover -s scripts/dict-builder -p \"test_*.py\"",
     "test": "npm run test:fe && npm run test:rs && npm run test:py",
     "lint:fe": "eslint .",
     "lint:rs": "cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings",
