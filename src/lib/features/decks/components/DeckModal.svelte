@@ -1,5 +1,6 @@
 <script lang="ts">
   import { X } from "@lucide/svelte";
+  import { toast } from "$lib/shared/toast.svelte";
   import { decksApi } from "../api";
 
   interface Props {
@@ -15,17 +16,15 @@
   let newCardsPerDay = $state(20);
   let desiredRetention = $state(90);
   let saving = $state(false);
-  let error = $state("");
 
   async function handleSubmit(e: Event) {
     e.preventDefault();
     if (!name.trim()) {
-      error = "Vui lòng nhập tên bộ thẻ.";
+      toast.error("Vui lòng nhập tên bộ thẻ.");
       return;
     }
 
     saving = true;
-    error = "";
     try {
       await decksApi.create({
         name: name.trim(),
@@ -35,10 +34,11 @@
       });
       name = "";
       description = "";
+      toast.success("Đã tạo bộ thẻ mới!");
       onCreated();
       onClose();
     } catch (err) {
-      error = String(err);
+      toast.error(err);
     } finally {
       saving = false;
     }
@@ -114,10 +114,6 @@
             />
           </div>
         </div>
-
-        {#if error}
-          <p class="text-xs text-rose-400">{error}</p>
-        {/if}
 
         <div class="flex justify-end gap-2 pt-2">
           <button

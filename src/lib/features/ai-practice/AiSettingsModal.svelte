@@ -1,6 +1,7 @@
 <script lang="ts">
-  import { CheckCircle2, RefreshCw, X } from "@lucide/svelte";
+  import { RefreshCw, X } from "@lucide/svelte";
   import Select from "$lib/shared/components/Select.svelte";
+  import { toast } from "$lib/shared/toast.svelte";
   import { aiApi } from "./api";
 
   interface Props {
@@ -47,10 +48,7 @@
 
   let availableModels = $state<string[]>([]);
   let testing = $state(false);
-  let testMsg = $state("");
-  let testError = $state("");
   let saving = $state(false);
-  let saved = $state(false);
 
   function detectProvider(url: string): ProviderId {
     const clean = url.trim().replace(/\/+$/, "");
@@ -64,8 +62,6 @@
     savedKeys[activeProvider] = apiKey;
     activeProvider = next;
     availableModels = [];
-    testMsg = "";
-    testError = "";
 
     if (next !== "custom") {
       baseUrl = PRESETS[next].baseUrl;
@@ -83,9 +79,6 @@
     model = s.model;
     savedKeys[detected] = s.apiKey;
     availableModels = [];
-    testMsg = "";
-    testError = "";
-    saved = false;
   }
 
   $effect(() => {
@@ -97,17 +90,15 @@
   async function handleTestAndFetchModels() {
     if (testing) return;
     testing = true;
-    testMsg = "";
-    testError = "";
     try {
       const models = await aiApi.listModels(baseUrl, apiKey);
       availableModels = models;
       if (models.length > 0 && !models.includes(model)) {
         model = models[0];
       }
-      testMsg = `Kết nối thành công! Tìm thấy ${models.length} model.`;
+      toast.success(`Kết nối thành công! Tìm thấy ${models.length} model.`);
     } catch (err) {
-      testError = String(err);
+      toast.error(err);
     } finally {
       testing = false;
     }
@@ -116,11 +107,12 @@
   async function handleSave(e: Event) {
     e.preventDefault();
     saving = true;
-    saved = false;
     try {
       await aiApi.saveSettings({ baseUrl, apiKey, model });
-      saved = true;
-      setTimeout(() => onClose(), 500);
+      toast.success("Đã lưu cấu hình AI!");
+      onClose();
+    } catch (err) {
+      toast.error(err);
     } finally {
       saving = false;
     }
@@ -214,19 +206,6 @@
             />
           {/if}
         </div>
-
-        {#if testMsg}
-          <p class="flex items-center gap-1.5 text-xs text-emerald-400">
-            <CheckCircle2 class="h-3.5 w-3.5 shrink-0" />
-            {testMsg}
-          </p>
-        {/if}
-        {#if testError}
-          <p class="rounded-xl bg-rose-500/10 p-2.5 text-xs text-rose-400">{testError}</p>
-        {/if}
-        {#if saved}
-          <p class="text-xs text-emerald-400">Đã lưu cấu hình AI!</p>
-        {/if}
 
         <div class="flex justify-end gap-2 pt-2">
           <button

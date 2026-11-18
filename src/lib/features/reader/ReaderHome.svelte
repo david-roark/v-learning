@@ -16,7 +16,6 @@
     parsingFile: boolean;
     loadingTarget: string;
     openingHistoryId: string | null;
-    error: string | null;
     history: ReaderHistoryItem[];
     onLoadUrl: (e: SubmitEvent) => void;
     onFileUpload: (e: Event) => void;
@@ -31,7 +30,6 @@
     parsingFile,
     loadingTarget,
     openingHistoryId,
-    error,
     history,
     onLoadUrl,
     onFileUpload,
@@ -121,10 +119,6 @@
         <Loader2 class="h-4 w-4 shrink-0 animate-spin text-indigo-400" />
         <span class="truncate">Đang tải nội dung: <strong>{loadingTarget}</strong>...</span>
       </div>
-    {/if}
-
-    {#if error}
-      <p class="rounded-xl bg-rose-500/10 px-3.5 py-2 text-xs text-rose-400">{error}</p>
     {/if}
   </div>
 

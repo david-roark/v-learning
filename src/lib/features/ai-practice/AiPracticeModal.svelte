@@ -1,5 +1,6 @@
 <script lang="ts">
   import { Send, Sparkles, X } from "@lucide/svelte";
+  import { toast } from "$lib/shared/toast.svelte";
   import { aiApi } from "./api";
 
   interface Props {
@@ -13,19 +14,17 @@
   let userText = $state("");
   let feedback = $state("");
   let loading = $state(false);
-  let error = $state("");
 
   async function handleEvaluate(e: Event) {
     e.preventDefault();
     if (!userText.trim() || loading) return;
     loading = true;
-    error = "";
     feedback = "";
     try {
       const res = await aiApi.evaluatePractice(targetWords, userText.trim());
       feedback = res.feedback;
     } catch (err) {
-      error = String(err);
+      toast.error(err);
     } finally {
       loading = false;
     }
@@ -81,10 +80,6 @@
           </button>
         </div>
       </form>
-
-      {#if error}
-        <p class="mt-3 rounded-xl bg-rose-500/10 p-3 text-xs text-rose-400">{error}</p>
-      {/if}
 
       {#if feedback}
         <div

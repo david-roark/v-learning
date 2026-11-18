@@ -8,6 +8,7 @@
   import { playWordAudio } from "$lib/shared/audio";
   import Select from "$lib/shared/components/Select.svelte";
   import { invokeCmd } from "$lib/shared/tauri";
+  import { toast } from "$lib/shared/toast.svelte";
   import type { DeckWithStats, DictionaryEntry } from "$lib/shared/types";
 
   let query = $state("");
@@ -16,20 +17,16 @@
   let decks = $state<DeckWithStats[]>([]);
   let selectedDeckId = $state("");
   let loading = $state(false);
-  let savedMsg = $state("");
-  let error = $state("");
 
   async function handleLookup(e?: Event) {
     e?.preventDefault();
     if (!query.trim()) return;
     loading = true;
-    error = "";
-    savedMsg = "";
     try {
       entry = await dictionaryApi.lookup(query.trim());
     } catch (err) {
       entry = null;
-      error = String(err);
+      toast.error(err);
     } finally {
       loading = false;
     }
@@ -46,9 +43,9 @@
         meaning: entry.meaningVi ?? entry.meaningEn ?? entry.word,
         exampleSentence: entry.exampleSentence ?? undefined,
       });
-      savedMsg = `Đã lưu "${entry.word}" vào bộ thẻ!`;
+      toast.success(`Đã lưu "${entry.word}" vào bộ thẻ!`);
     } catch (err) {
-      error = String(err);
+      toast.error(err);
     }
   }
 
@@ -106,10 +103,6 @@
       </button>
     </form>
 
-    {#if error}
-      <p class="rounded-xl bg-rose-500/10 p-3 text-xs text-rose-400">{error}</p>
-    {/if}
-
     {#if entry}
       <div class="rounded-2xl border border-zinc-800 bg-zinc-900/80 p-4 space-y-2.5">
         <div class="flex items-center justify-between">
@@ -150,9 +143,6 @@
 
   {#if entry}
     <div class="mt-4 space-y-2 border-t border-zinc-800 pt-3">
-      {#if savedMsg}
-        <p class="text-xs font-medium text-emerald-400">{savedMsg}</p>
-      {/if}
       <div class="flex items-center gap-2">
         <Select
           options={decks.map((d) => ({ value: d.id, label: d.name }))}

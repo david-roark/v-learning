@@ -14,6 +14,7 @@
   import { notesApi } from "$lib/features/card-editor/api";
   import { playWordAudio } from "$lib/shared/audio";
   import Select from "$lib/shared/components/Select.svelte";
+  import { toast } from "$lib/shared/toast.svelte";
   import type { DeckWithStats, DictPackInfo, DictionaryEntry } from "$lib/shared/types";
   import { dictionaryApi } from "../api";
 
@@ -33,8 +34,6 @@
   let selectedDeckId = $state("");
   let loading = $state(false);
   let showImport = $state(false);
-  let statusMsg = $state("");
-  let error = $state("");
 
   $effect(() => {
     if (!selectedDeckId && decks.length > 0) {
@@ -44,7 +43,6 @@
 
   async function loadList() {
     loading = true;
-    error = "";
     try {
       const [list, count] = await Promise.all([
         dictionaryApi.search(query.trim(), 40),
@@ -53,7 +51,7 @@
       entries = list;
       totalCount = count;
     } catch (err) {
-      error = String(err);
+      toast.error(err);
     } finally {
       loading = false;
     }
@@ -68,14 +66,12 @@
     e.preventDefault();
     if (!query.trim()) return;
     loading = true;
-    error = "";
-    statusMsg = "";
     try {
       const entry = await dictionaryApi.lookup(query.trim());
       entries = [entry, ...entries.filter((x) => x.id !== entry.id)];
       totalCount = await dictionaryApi.count();
     } catch (err) {
-      error = String(err);
+      toast.error(err);
     } finally {
       loading = false;
     }
@@ -83,11 +79,9 @@
 
   async function handleSaveCard(entry: DictionaryEntry) {
     if (!selectedDeckId) {
-      error = "Hãy tạo ít nhất 1 bộ thẻ trước khi lưu.";
+      toast.error("Hãy tạo ít nhất 1 bộ thẻ trước khi lưu.");
       return;
     }
-    error = "";
-    statusMsg = "";
     try {
       await notesApi.create({
         deckId: selectedDeckId,
@@ -97,10 +91,10 @@
         meaning: entry.meaningVi ?? entry.meaningEn ?? entry.word,
         exampleSentence: entry.exampleSentence ?? undefined,
       });
-      statusMsg = `Đã thêm "${entry.word}" vào bộ thẻ!`;
+      toast.success(`Đã thêm "${entry.word}" vào bộ thẻ!`);
       onCardAdded();
     } catch (err) {
-      error = String(err);
+      toast.error(err);
     }
   }
 
@@ -109,14 +103,13 @@
     const file = input.files?.[0];
     if (!file) return;
     loading = true;
-    error = "";
     try {
       const text = await file.text();
       const imported = await dictionaryApi.importTsv(text);
-      statusMsg = `Đã import thành công ${imported} mục từ vào từ điển offline.`;
+      toast.success(`Đã import thành công ${imported} mục từ vào từ điển offline.`);
       await loadList();
     } catch (err) {
-      error = String(err);
+      toast.error(err);
     } finally {
       loading = false;
       input.value = "";
@@ -129,16 +122,16 @@
     if (!file) return;
     installingDbPack = true;
     installProgress = 0;
-    error = "";
-    statusMsg = "";
     try {
       packInfo = await dictionaryApi.installPackFile(file, (pct) => {
         installProgress = pct;
       });
-      statusMsg = `Đã cài đặt gói từ điển "${packInfo.profile ?? "offline"}" (${packInfo.wordCount.toLocaleString()} từ, ${packInfo.formCount.toLocaleString()} biến thể).`;
+      toast.success(
+        `Đã cài đặt gói từ điển "${packInfo.profile ?? "offline"}" (${packInfo.wordCount.toLocaleString()} từ, ${packInfo.formCount.toLocaleString()} biến thể).`,
+      );
       await loadList();
     } catch (err) {
-      error = String(err);
+      toast.error(err);
     } finally {
       installingDbPack = false;
       installProgress = 0;
@@ -148,15 +141,13 @@
 
   async function handleRemoveDbPack() {
     installingDbPack = true;
-    error = "";
-    statusMsg = "";
     try {
       await dictionaryApi.removePack();
       packInfo = await dictionaryApi.getPackInfo();
-      statusMsg = "Đã gỡ gói từ điển dict.db.";
+      toast.info("Đã gỡ gói từ điển dict.db.");
       await loadList();
     } catch (err) {
-      error = String(err);
+      toast.error(err);
     } finally {
       installingDbPack = false;
     }
@@ -309,13 +300,6 @@
       Tra Online
     </button>
   </form>
-
-  {#if statusMsg}
-    <p class="rounded-xl bg-emerald-500/10 px-3.5 py-2 text-xs text-emerald-400">{statusMsg}</p>
-  {/if}
-  {#if error}
-    <p class="rounded-xl bg-rose-500/10 px-3.5 py-2 text-xs text-rose-400">{error}</p>
-  {/if}
 
   <div class="space-y-2.5">
     {#each entries as entry (entry.id)}

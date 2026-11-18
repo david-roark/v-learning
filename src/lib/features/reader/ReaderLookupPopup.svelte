@@ -24,8 +24,6 @@
     lookupResult: DictionaryEntry | null;
     customMeaning: string;
     contextSentence: string;
-    statusMsg: string | null;
-    error: string | null;
     onQuickCreateDeck: (e: SubmitEvent) => void;
     onManualSearch: (e: SubmitEvent) => void;
     onSaveWithContext: () => void;
@@ -44,8 +42,6 @@
     lookupResult,
     customMeaning = $bindable(),
     contextSentence = $bindable(),
-    statusMsg,
-    error,
     onQuickCreateDeck,
     onManualSearch,
     onSaveWithContext,
@@ -254,13 +250,6 @@
         {:else}
           {@render fullContent()}
         {/if}
-
-        {#if statusMsg}
-          <p class="rounded-xl bg-emerald-500/10 p-2.5 text-xs text-emerald-400">{statusMsg}</p>
-        {/if}
-        {#if error}
-          <p class="rounded-xl bg-rose-500/10 p-2.5 text-xs text-rose-400">{error}</p>
-        {/if}
       </div>
     </div>
   {:else}
@@ -297,13 +286,6 @@
 
       <div class="flex-1 space-y-3 overflow-y-auto p-3.5">
         {@render fullContent()}
-
-        {#if statusMsg}
-          <p class="rounded-xl bg-emerald-500/10 p-2.5 text-xs text-emerald-400">{statusMsg}</p>
-        {/if}
-        {#if error}
-          <p class="rounded-xl bg-rose-500/10 p-2.5 text-xs text-rose-400">{error}</p>
-        {/if}
       </div>
     </div>
   {/if}

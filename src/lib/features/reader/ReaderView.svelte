@@ -18,6 +18,7 @@
   import { dictionaryApi } from "$lib/features/dictionary/api";
   import Select from "$lib/shared/components/Select.svelte";
   import { invokeCmd } from "$lib/shared/tauri";
+  import { toast } from "$lib/shared/toast.svelte";
   import type { DeckWithStats, DictionaryEntry } from "$lib/shared/types";
   import { openPdfSession, type BookSection, type PdfFitMode, type PdfSession } from "./pdfParser";
   import ReaderHome from "./ReaderHome.svelte";
@@ -97,8 +98,6 @@
   let lookingUp = $state(false);
   let lookupOpen = $state(false);
   let lookupAnchor = $state<LookupAnchorRect | null>(null);
-  let statusMsg = $state("");
-  let error = $state("");
 
   $effect(() => {
     if (!selectedDeckId && decks.length > 0) {
@@ -142,8 +141,6 @@
     lookupResult = null;
     lookupOpen = false;
     lookupAnchor = null;
-    error = "";
-    statusMsg = "";
   }
 
   function loadPdfPage(pageNum: number) {
@@ -277,16 +274,15 @@
     e.preventDefault();
     const name = newDeckName.trim();
     if (!name) return;
-    error = "";
     try {
       const created = await decksApi.create({ name });
       newDeckName = "";
       creatingDeck = false;
       selectedDeckId = created.id;
-      statusMsg = `Đã tạo bộ thẻ "${created.name}"!`;
+      toast.success(`Đã tạo bộ thẻ "${created.name}"!`);
       onCardAdded();
     } catch (err) {
-      error = String(err);
+      toast.error(err);
     }
   }
 
@@ -294,8 +290,6 @@
     const clean = word.trim();
     if (!clean) return;
     lookingUp = true;
-    error = "";
-    statusMsg = "";
     lookupResult = null;
     customMeaning = "";
     try {
@@ -304,7 +298,7 @@
       customMeaning = res.meaningVi ?? res.meaningEn ?? "";
       contextSentence = sentence ?? res.exampleSentence ?? "";
     } catch (err) {
-      error = String(err);
+      toast.error(err);
       if (sentence) contextSentence = sentence;
     } finally {
       lookingUp = false;
@@ -350,7 +344,6 @@
     if (!targetWord || !selectedDeckId) return;
     const meaning =
       customMeaning.trim() || lookupResult?.meaningVi || lookupResult?.meaningEn || targetWord;
-    error = "";
     try {
       await notesApi.create({
         deckId: selectedDeckId,
@@ -360,10 +353,10 @@
         meaning,
         exampleSentence: contextSentence.trim() || undefined,
       });
-      statusMsg = `Đã lưu "${targetWord}" vào bộ thẻ!`;
+      toast.success(`Đã lưu "${targetWord}" vào bộ thẻ!`);
       onCardAdded();
     } catch (err) {
-      error = String(err);
+      toast.error(err);
     }
   }
 
@@ -379,8 +372,6 @@
 
     parsingFile = true;
     loadingTarget = label || target;
-    error = "";
-    statusMsg = "";
     editing = false;
     await clearPdfSession();
     sections = [];
@@ -410,7 +401,7 @@
       webUrl = target;
       showUrlBar = false;
     } catch (err) {
-      error = String(err);
+      toast.error(err);
     } finally {
       parsingFile = false;
       loadingTarget = "";
@@ -431,8 +422,6 @@
   ) {
     parsingFile = true;
     loadingTarget = fileName;
-    error = "";
-    statusMsg = "";
     editing = false;
     youtubeId = null;
     youtubeTranscript = [];
@@ -493,7 +482,7 @@
         history = saved.items;
       }
     } catch (err) {
-      error = String(err);
+      toast.error(err);
     } finally {
       parsingFile = false;
       loadingTarget = "";
@@ -523,7 +512,7 @@
       const cached = await loadCachedReaderFile(item.id);
       if (!cached) {
         openingHistoryId = null;
-        error = `Không tìm thấy cache cho "${item.title}". Vui lòng chọn lại file từ máy.`;
+        toast.error(`Không tìm thấy cache cho "${item.title}". Vui lòng chọn lại file từ máy.`);
         return;
       }
       activeHistoryId = item.id;
@@ -558,7 +547,6 @@
     {parsingFile}
     {loadingTarget}
     {openingHistoryId}
-    {error}
     {history}
     onLoadUrl={handleLoadUrl}
     onFileUpload={handleFileUpload}
@@ -897,8 +885,6 @@
       {lookupResult}
       bind:customMeaning
       bind:contextSentence
-      {statusMsg}
-      {error}
       onQuickCreateDeck={handleQuickCreateDeck}
       onManualSearch={handleManualSearch}
       onSaveWithContext={handleSaveWithContext}

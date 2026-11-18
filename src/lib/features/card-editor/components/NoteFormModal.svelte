@@ -1,6 +1,7 @@
 <script lang="ts">
   import { Sparkles, X } from "@lucide/svelte";
   import { dictionaryApi } from "$lib/features/dictionary/api";
+  import { toast } from "$lib/shared/toast.svelte";
   import type { Note, NoteType } from "$lib/shared/types";
   import { notesApi } from "../api";
 
@@ -23,7 +24,6 @@
   let collocationsText = $state("");
   let saving = $state(false);
   let lookingUp = $state(false);
-  let error = $state("");
 
   $effect(() => {
     if (open && editNote) {
@@ -33,14 +33,12 @@
       meaning = editNote.meaning;
       exampleSentence = editNote.exampleSentence ?? "";
       collocationsText = editNote.collocations.join(", ");
-      error = "";
     }
   });
 
   async function handleAutoFill() {
     if (!word.trim() || lookingUp) return;
     lookingUp = true;
-    error = "";
     try {
       const [entry, colls] = await Promise.all([
         dictionaryApi.lookup(word.trim()),
@@ -57,7 +55,7 @@
         collocationsText = colls.join(", ");
       }
     } catch (err) {
-      error = String(err);
+      toast.error(err);
     } finally {
       lookingUp = false;
     }
@@ -69,18 +67,16 @@
     meaning = "";
     exampleSentence = "";
     collocationsText = "";
-    error = "";
   }
 
   async function handleSubmit(e: Event) {
     e.preventDefault();
     if (!word.trim() || !meaning.trim()) {
-      error = "Vui lòng nhập từ vựng và nghĩa.";
+      toast.error("Vui lòng nhập từ vựng và nghĩa.");
       return;
     }
 
     saving = true;
-    error = "";
     try {
       const collocations = collocationsText
         .split(",")
@@ -96,6 +92,7 @@
           exampleSentence: exampleSentence.trim() || undefined,
           collocations,
         });
+        toast.success("Đã cập nhật ghi chú!");
         onSaved({
           ...editNote,
           word: word.trim(),
@@ -115,11 +112,12 @@
           exampleSentence: exampleSentence.trim() || undefined,
           collocations,
         });
+        toast.success(`Đã thêm "${word.trim()}" vào ${deckName}!`);
         resetForm();
         onSaved();
       }
     } catch (err) {
-      error = String(err);
+      toast.error(err);
     } finally {
       saving = false;
     }
@@ -243,10 +241,6 @@
             class="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 placeholder-zinc-500 focus:border-indigo-500 focus:outline-none"
           />
         </div>
-
-        {#if error}
-          <p class="text-xs text-rose-400">{error}</p>
-        {/if}
 
         <div class="flex justify-end gap-2 pt-2">
           <button

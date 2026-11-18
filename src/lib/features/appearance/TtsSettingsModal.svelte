@@ -2,6 +2,7 @@
   import { ArrowDown, ArrowUp, Volume2, X } from "@lucide/svelte";
   import { playAudioBytes, playWordAudio, speakSystemTts, ttsApi } from "$lib/shared/audio";
   import Select, { type SelectOption } from "$lib/shared/components/Select.svelte";
+  import { toast } from "$lib/shared/toast.svelte";
 
   interface Props {
     open: boolean;
@@ -61,13 +62,9 @@
   });
   let saving = $state(false);
   let testingId = $state<string | null>(null);
-  let statusMsg = $state("");
-  let error = $state("");
 
   $effect(() => {
     if (open) {
-      statusMsg = "";
-      error = "";
       void ttsApi.getSettings().then((s) => {
         const nextVoices: Record<string, string> = {};
         for (const p of ALL_PROVIDERS) {
@@ -113,12 +110,10 @@
   async function saveCurrent(): Promise<boolean> {
     const fallbackOrder = orderedItems.filter((i) => i.enabled).map((i) => i.id);
     if (fallbackOrder.length === 0) {
-      error = "Cần bật ít nhất 1 nguồn TTS.";
+      toast.error("Cần bật ít nhất 1 nguồn TTS.");
       return false;
     }
     saving = true;
-    error = "";
-    statusMsg = "";
     try {
       await ttsApi.saveSettings({
         fallbackOrder,
@@ -127,7 +122,7 @@
       });
       return true;
     } catch (err) {
-      error = String(err);
+      toast.error(err);
       return false;
     } finally {
       saving = false;
@@ -137,14 +132,12 @@
   async function handleSave(e: Event) {
     e.preventDefault();
     if (await saveCurrent()) {
-      statusMsg = "Đã lưu cấu hình phát âm (TTS)!";
+      toast.success("Đã lưu cấu hình phát âm (TTS)!");
     }
   }
 
   async function handlePreviewProvider(meta: ProviderMeta) {
     testingId = meta.id;
-    error = "";
-    statusMsg = "";
     try {
       if (meta.id === "system_tts") {
         await speakSystemTts(meta.sampleText);
@@ -154,7 +147,7 @@
       const bytes = await ttsApi.previewProvider(meta.id, voice, meta.sampleText);
       await playAudioBytes(bytes);
     } catch (err) {
-      error = String(err);
+      toast.error(err);
     } finally {
       testingId = null;
     }
@@ -163,7 +156,6 @@
   async function handleTestFallback() {
     if (!(await saveCurrent())) return;
     testingId = "fallback";
-    error = "";
     try {
       await playWordAudio("Ubiquitous learners stay resilient.");
     } finally {
@@ -257,13 +249,6 @@
             {/each}
           </div>
         </div>
-
-        {#if statusMsg}
-          <p class="rounded-xl bg-emerald-500/10 p-2.5 text-emerald-400">{statusMsg}</p>
-        {/if}
-        {#if error}
-          <p class="rounded-xl bg-rose-500/10 p-2.5 text-rose-400">{error}</p>
-        {/if}
 
         <div class="flex items-center justify-between gap-2 pt-2">
           <button

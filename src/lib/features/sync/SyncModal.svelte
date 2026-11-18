@@ -1,6 +1,7 @@
 <script lang="ts">
   import { openUrl } from "@tauri-apps/plugin-opener";
   import { CloudDownload, CloudUpload, Download, LogIn, LogOut, Upload, X } from "@lucide/svelte";
+  import { toast } from "$lib/shared/toast.svelte";
   import type { GoogleDriveBackupInfo } from "$lib/shared/types";
   import { syncApi } from "./api";
 
@@ -24,8 +25,6 @@
   let gdriveBackupInfo = $state<GoogleDriveBackupInfo | null>(null);
   let loadingBackupInfo = $state(false);
   let busy = $state(false);
-  let msg = $state("");
-  let error = $state("");
 
   async function refreshGoogleBackupInfo() {
     loadingBackupInfo = true;
@@ -54,8 +53,6 @@
 
   $effect(() => {
     if (open) {
-      msg = "";
-      error = "";
       void syncApi.getWebDavSettings().then((s) => {
         url = s.url;
         username = s.username;
@@ -82,8 +79,6 @@
   async function handleGoogleLogin() {
     busy = true;
     gdriveLoggingIn = true;
-    error = "";
-    msg = "";
     try {
       const { authUrl } = await syncApi.startGoogleDriveLogin(gdriveClientId, gdriveClientSecret);
       await openUrl(authUrl);
@@ -93,13 +88,13 @@
       gdriveClientId = st.clientId;
       gdriveClientSecret = "";
       showGdriveConfig = false;
-      msg = st.userEmail
-        ? `Đã kết nối Google Drive (${st.userEmail}).`
-        : "Đã kết nối Google Drive.";
+      toast.success(
+        st.userEmail ? `Đã kết nối Google Drive (${st.userEmail}).` : "Đã kết nối Google Drive.",
+      );
       void refreshGoogleBackupInfo();
     } catch (e) {
       void syncApi.cancelGoogleDriveLogin();
-      error = String(e);
+      toast.error(e);
     } finally {
       gdriveLoggingIn = false;
       busy = false;
@@ -114,16 +109,14 @@
 
   async function handleGoogleLogout() {
     busy = true;
-    error = "";
-    msg = "";
     try {
       const st = await syncApi.logoutGoogleDrive();
       gdriveConnected = st.connected;
       gdriveEmail = st.userEmail;
       gdriveBackupInfo = null;
-      msg = "Đã đăng xuất Google Drive.";
+      toast.info("Đã đăng xuất Google Drive.");
     } catch (e) {
-      error = String(e);
+      toast.error(e);
     } finally {
       busy = false;
     }
@@ -131,14 +124,12 @@
 
   async function handleGooglePush() {
     busy = true;
-    error = "";
-    msg = "";
     try {
       await syncApi.pushGoogleDrive();
-      msg = "Đã sao lưu dữ liệu lên Google Drive thành công!";
+      toast.success("Đã sao lưu dữ liệu lên Google Drive thành công!");
       void refreshGoogleBackupInfo();
     } catch (e) {
-      error = String(e);
+      toast.error(e);
     } finally {
       busy = false;
     }
@@ -146,14 +137,14 @@
 
   async function handleGooglePull() {
     busy = true;
-    error = "";
-    msg = "";
     try {
       const report = await syncApi.pullGoogleDrive();
-      msg = `Đã khôi phục từ Google Drive: ${report.decks} bộ thẻ, ${report.notes} ghi chú.`;
+      toast.success(
+        `Đã khôi phục từ Google Drive: ${report.decks} bộ thẻ, ${report.notes} ghi chú.`,
+      );
       onRestored();
     } catch (e) {
-      error = String(e);
+      toast.error(e);
     } finally {
       busy = false;
     }
@@ -161,7 +152,6 @@
 
   async function handleExportJson() {
     busy = true;
-    error = "";
     try {
       const json = await syncApi.exportBackup();
       const blob = new Blob([json], { type: "application/json" });
@@ -171,9 +161,9 @@
       a.download = `vlearning-backup-${new Date().toISOString().slice(0, 10)}.json`;
       a.click();
       URL.revokeObjectURL(dlUrl);
-      msg = "Đã xuất file sao lưu JSON thành công!";
+      toast.success("Đã xuất file sao lưu JSON thành công!");
     } catch (err) {
-      error = String(err);
+      toast.error(err);
     } finally {
       busy = false;
     }
@@ -184,14 +174,15 @@
     const file = input.files?.[0];
     if (!file) return;
     busy = true;
-    error = "";
     try {
       const text = await file.text();
       const rep = await syncApi.importBackup(text);
-      msg = `Đã khôi phục: ${rep.decks} bộ thẻ, ${rep.notes} ghi chú, ${rep.reviewLogs} lịch sử ôn.`;
+      toast.success(
+        `Đã khôi phục: ${rep.decks} bộ thẻ, ${rep.notes} ghi chú, ${rep.reviewLogs} lịch sử ôn.`,
+      );
       onRestored();
     } catch (err) {
-      error = String(err);
+      toast.error(err);
     } finally {
       busy = false;
       input.value = "";
@@ -200,13 +191,12 @@
 
   async function handlePush() {
     busy = true;
-    error = "";
     try {
       await syncApi.saveWebDavSettings({ url, username, password });
       await syncApi.pushWebDav();
-      msg = "Đã đẩy bản sao lưu lên WebDAV thành công!";
+      toast.success("Đã đẩy bản sao lưu lên WebDAV thành công!");
     } catch (err) {
-      error = String(err);
+      toast.error(err);
     } finally {
       busy = false;
     }
@@ -214,14 +204,13 @@
 
   async function handlePull() {
     busy = true;
-    error = "";
     try {
       await syncApi.saveWebDavSettings({ url, username, password });
       const rep = await syncApi.pullWebDav();
-      msg = `Đã đồng bộ về máy: ${rep.decks} bộ thẻ, ${rep.notes} ghi chú.`;
+      toast.success(`Đã đồng bộ về máy: ${rep.decks} bộ thẻ, ${rep.notes} ghi chú.`);
       onRestored();
     } catch (err) {
-      error = String(err);
+      toast.error(err);
     } finally {
       busy = false;
     }
@@ -435,13 +424,6 @@
             </button>
           </div>
         </div>
-
-        {#if msg}
-          <p class="rounded-xl bg-emerald-500/10 p-3 text-xs text-emerald-400">{msg}</p>
-        {/if}
-        {#if error}
-          <p class="rounded-xl bg-rose-500/10 p-3 text-xs text-rose-400">{error}</p>
-        {/if}
       </div>
     </div>
   </div>
