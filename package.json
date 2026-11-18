@@ -10,7 +10,7 @@
     "prepare": "svelte-kit sync || echo ''",
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
     "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
-    "test:fe": "node --test src/lib/shared/toastQueue.test.mjs src/lib/features/dictation/diff.test.mjs src/lib/features/reader/textParser.test.mjs src/lib/features/reader/readerHistory.test.mjs src/lib/features/games/gameEngine.test.mjs",
+    "test:fe": "node --test \"src/**/*.test.mjs\"",
     "test:rs": "cargo test --manifest-path src-tauri/Cargo.toml",
     "test:py": "python3 -m unittest scripts/dict-builder/test_builder.py",
     "test": "npm run test:fe && npm run test:rs && npm run test:py",
