@@ -10,7 +10,7 @@ use crate::sync;
 use crate::sync::gdrive::PendingGoogleOAuth;
 use crate::sync::snapshots::{
     MAX_LOCAL_SNAPSHOTS, backup_dir, create_snapshot_in_dir, list_snapshots_in_dir,
-    read_snapshot_in_dir,
+    read_snapshot_bytes_in_dir,
 };
 
 #[tauri::command]
@@ -148,7 +148,7 @@ pub async fn sync_google_drive_push(
                 .map_err(|_| AppError::Internal("Database lock poisoned".into()))?;
         (
             settings_repo::get_google_drive_settings(&conn)?,
-            sync::export_backup_json(&conn)?,
+            sync::export_backup_gzip(&conn)?,
         )
     };
     let (mut updated, changed) = sync::gdrive::refresh_access_token_if_needed(settings).await?;
@@ -210,13 +210,13 @@ pub async fn sync_google_drive_pull(
                 .map_err(|_| AppError::Internal("Database lock poisoned".into()))?;
         settings_repo::save_google_drive_settings(&conn, &updated)?;
     }
-    let (json_str, mod_time) = sync::gdrive::drive_pull_backup(&updated.access_token).await?;
+    let (bytes, mod_time) = sync::gdrive::drive_pull_backup(&updated.access_token).await?;
     let dir = backup_dir(&app)?;
     let mut conn =
         db.0.lock()
             .map_err(|_| AppError::Internal("Database lock poisoned".into()))?;
     let _ = create_snapshot_in_dir(&dir, &conn, "pre-restore", MAX_LOCAL_SNAPSHOTS)?;
-    let report = sync::import_backup_json(&mut conn, &json_str)?;
+    let report = sync::import_backup_bytes(&mut conn, &bytes)?;
     if let Some(mt) = mod_time {
         updated.last_synced_remote_modified = mt;
         settings_repo::save_google_drive_settings(&conn, &updated)?;
@@ -260,12 +260,12 @@ pub fn restore_local_backup(
     filename: String,
 ) -> AppResult<BackupRestoreReport> {
     let dir = backup_dir(&app)?;
-    let json_str = read_snapshot_in_dir(&dir, &filename)?;
+    let bytes = read_snapshot_bytes_in_dir(&dir, &filename)?;
     let mut conn =
         db.0.lock()
             .map_err(|_| AppError::Internal("Database lock poisoned".into()))?;
     let _ = create_snapshot_in_dir(&dir, &conn, "pre-restore", MAX_LOCAL_SNAPSHOTS)?;
-    sync::import_backup_json(&mut conn, &json_str)
+    sync::import_backup_bytes(&mut conn, &bytes)
 }
 
 #[tauri::command]

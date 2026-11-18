@@ -749,7 +749,7 @@ pub(crate) async fn drive_push_with_endpoints(
     api_base: &str,
     upload_base: &str,
     access_token: &str,
-    json_body: &str,
+    payload_bytes: &[u8],
 ) -> AppResult<Option<String>> {
     let existing_id = find_backup_file_meta(client, api_base, access_token)
         .await?
@@ -764,8 +764,8 @@ pub(crate) async fn drive_push_with_endpoints(
         client
             .patch(&url)
             .bearer_auth(access_token)
-            .header("Content-Type", "application/json; charset=utf-8")
-            .body(json_body.to_string())
+            .header("Content-Type", "application/gzip")
+            .body(payload_bytes.to_vec())
             .send()
             .await
     } else {
@@ -775,9 +775,16 @@ pub(crate) async fn drive_push_with_endpoints(
             "parents": ["appDataFolder"],
         })
         .to_string();
-        let multipart_body = format!(
-            "--{boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n{metadata}\r\n--{boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n{json_body}\r\n--{boundary}--\r\n"
+        let prefix = format!(
+            "--{boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n{metadata}\r\n--{boundary}\r\nContent-Type: application/gzip\r\n\r\n"
         );
+        let suffix = format!("\r\n--{boundary}--\r\n");
+        let mut multipart_body =
+            Vec::with_capacity(prefix.len() + payload_bytes.len() + suffix.len());
+        multipart_body.extend_from_slice(prefix.as_bytes());
+        multipart_body.extend_from_slice(payload_bytes);
+        multipart_body.extend_from_slice(suffix.as_bytes());
+
         let url = format!(
             "{}/files?uploadType=multipart&fields=id,modifiedTime",
             upload_base.trim_end_matches('/'),
@@ -811,7 +818,7 @@ pub(crate) async fn drive_pull_with_endpoints(
     client: &reqwest::Client,
     api_base: &str,
     access_token: &str,
-) -> AppResult<(String, Option<String>)> {
+) -> AppResult<(Vec<u8>, Option<String>)> {
     let meta = find_backup_file_meta(client, api_base, access_token)
         .await?
         .ok_or_else(|| AppError::NotFound("Chưa có bản sao lưu nào trên Google Drive.".into()))?;
@@ -836,26 +843,29 @@ pub(crate) async fn drive_pull_with_endpoints(
         )));
     }
 
-    let body = resp
-        .text()
+    let bytes = resp
+        .bytes()
         .await
         .map_err(|e| AppError::Internal(format!("Không đọc được dữ liệu backup: {e}")))?;
-    Ok((body, meta.modified_time))
+    Ok((bytes.to_vec(), meta.modified_time))
 }
 
-pub async fn drive_push_backup(access_token: &str, json_body: &str) -> AppResult<Option<String>> {
+pub async fn drive_push_backup(
+    access_token: &str,
+    payload_bytes: &[u8],
+) -> AppResult<Option<String>> {
     let client = build_client(30)?;
     drive_push_with_endpoints(
         &client,
         GOOGLE_DRIVE_API_BASE,
         GOOGLE_DRIVE_UPLOAD_BASE,
         access_token,
-        json_body,
+        payload_bytes,
     )
     .await
 }
 
-pub async fn drive_pull_backup(access_token: &str) -> AppResult<(String, Option<String>)> {
+pub async fn drive_pull_backup(access_token: &str) -> AppResult<(Vec<u8>, Option<String>)> {
     let client = build_client(30)?;
     drive_pull_with_endpoints(&client, GOOGLE_DRIVE_API_BASE, access_token).await
 }
@@ -996,7 +1006,7 @@ mod tests {
                 &list_url,
                 &upload_url,
                 "tok1",
-                r#"{"decks":[]}"#,
+                br#"{"decks":[]}"#,
             )
             .await
             .expect("push create");
@@ -1016,9 +1026,15 @@ mod tests {
             );
             let (upload_url2, upload_rx2) =
                 spawn_one_shot("200 OK", "application/json", br#"{"id":"file_1"}"#.to_vec());
-            drive_push_with_endpoints(&client, &list_url2, &upload_url2, "tok1", r#"{"decks":[]}"#)
-                .await
-                .expect("push update");
+            drive_push_with_endpoints(
+                &client,
+                &list_url2,
+                &upload_url2,
+                "tok1",
+                br#"{"decks":[]}"#,
+            )
+            .await
+            .expect("push update");
             let _ = list_rx2.recv().expect("list2 captured");
             let patch_req = upload_rx2.recv().expect("patch captured");
             assert!(patch_req.request_line.starts_with("PATCH "));
@@ -1066,7 +1082,7 @@ mod tests {
             let (downloaded, mod_time) = drive_pull_with_endpoints(&client, &api_base, "tok1")
                 .await
                 .expect("pull ok");
-            assert_eq!(downloaded, r#"{"version":1,"decks":[]}"#);
+            assert_eq!(downloaded, br#"{"version":1,"decks":[]}"#);
             assert_eq!(mod_time.as_deref(), Some("2026-11-18T12:30:00Z"));
             let reqs = handle.join().expect("join");
             assert!(reqs[0].contains("spaces=appDataFolder"));

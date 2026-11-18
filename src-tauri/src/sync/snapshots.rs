@@ -7,7 +7,7 @@ use tauri::{AppHandle, Manager};
 
 use crate::error::{AppError, AppResult};
 use crate::models::LocalBackupEntry;
-use crate::sync::export_backup_json;
+use crate::sync::export_backup_gzip;
 
 pub const MAX_LOCAL_SNAPSHOTS: usize = 10;
 
@@ -29,7 +29,10 @@ fn db_has_user_data(conn: &Connection) -> AppResult<bool> {
 }
 
 fn parse_snapshot_meta(filename: &str) -> Option<(String, i64)> {
-    let stem = filename.strip_prefix("vlearning-")?.strip_suffix(".json")?;
+    let rest = filename.strip_prefix("vlearning-")?;
+    let stem = rest
+        .strip_suffix(".json.gz")
+        .or_else(|| rest.strip_suffix(".json"))?;
     let (reason, ts_str) = stem.rsplit_once('-')?;
     let ts = ts_str.parse::<i64>().ok()?;
     Some((reason.to_string(), ts))
@@ -53,12 +56,12 @@ pub fn create_snapshot_in_dir(
         .map(|c| if c.is_ascii_alphanumeric() { c } else { '-' })
         .collect();
     let ts = Utc::now().timestamp_millis();
-    let filename = format!("vlearning-{clean_reason}-{ts}.json");
+    let filename = format!("vlearning-{clean_reason}-{ts}.json.gz");
     let path = dir.join(&filename);
-    let json = export_backup_json(conn)?;
-    let size_bytes = u64::try_from(json.len()).unwrap_or(0);
+    let bytes = export_backup_gzip(conn)?;
+    let size_bytes = u64::try_from(bytes.len()).unwrap_or(0);
 
-    fs::write(&path, json.as_bytes())
+    fs::write(&path, &bytes)
         .map_err(|e| AppError::Internal(format!("Không ghi được snapshot backup: {e}")))?;
 
     prune_snapshots_in_dir(dir, max_keep)?;
@@ -115,7 +118,7 @@ pub fn list_snapshots_in_dir(dir: &Path) -> AppResult<Vec<LocalBackupEntry>> {
     Ok(list)
 }
 
-pub fn read_snapshot_in_dir(dir: &Path, filename: &str) -> AppResult<String> {
+pub fn read_snapshot_bytes_in_dir(dir: &Path, filename: &str) -> AppResult<Vec<u8>> {
     if filename.contains('/')
         || filename.contains('\\')
         || filename.contains("..")
@@ -133,8 +136,7 @@ pub fn read_snapshot_in_dir(dir: &Path, filename: &str) -> AppResult<String> {
         ));
     }
 
-    fs::read_to_string(&path)
-        .map_err(|e| AppError::Internal(format!("Không đọc được snapshot: {e}")))
+    fs::read(&path).map_err(|e| AppError::Internal(format!("Không đọc được snapshot: {e}")))
 }
 
 #[cfg(test)]
@@ -203,11 +205,14 @@ mod tests {
         assert_eq!(listed.len(), 2);
         assert!(listed[0].created_at >= listed[1].created_at);
 
-        let content = read_snapshot_in_dir(&dir, &listed[0].filename).expect("read");
-        assert!(content.contains("resilient"));
+        let content = read_snapshot_bytes_in_dir(&dir, &listed[0].filename).expect("read");
+        assert!(content.starts_with(&[0x1f, 0x8b]));
+        let mut dst = open_in_memory_for_test();
+        let rep = crate::sync::import_backup_bytes(&mut dst, &content).expect("restore");
+        assert_eq!(rep.notes, 1);
 
         // Path traversal rejected
-        assert!(read_snapshot_in_dir(&dir, "../etc/passwd").is_err());
+        assert!(read_snapshot_bytes_in_dir(&dir, "../etc/passwd").is_err());
 
         let _ = fs::remove_dir_all(&dir);
     }

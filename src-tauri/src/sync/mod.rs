@@ -1,7 +1,12 @@
 pub mod gdrive;
 pub mod snapshots;
 
+use std::io::{Read, Write};
+
 use chrono::Utc;
+use flate2::Compression;
+use flate2::read::GzDecoder;
+use flate2::write::GzEncoder;
 use rusqlite::{Connection, params};
 use serde::{Deserialize, Serialize};
 
@@ -33,7 +38,7 @@ struct BackupPayload {
     review_logs: Vec<ReviewLogRow>,
 }
 
-pub fn export_backup_json(conn: &Connection) -> AppResult<String> {
+fn build_backup_payload(conn: &Connection) -> AppResult<BackupPayload> {
     let decks = {
         let mut stmt = conn.prepare(
             "SELECT id, name, description, new_cards_per_day, desired_retention, created_at FROM decks",
@@ -103,17 +108,48 @@ pub fn export_backup_json(conn: &Connection) -> AppResult<String> {
         rows.collect::<Result<Vec<_>, _>>()?
     };
 
-    let payload = BackupPayload {
+    Ok(BackupPayload {
         version: 1,
         exported_at: Utc::now().timestamp_millis(),
         decks,
         notes,
         cards,
         review_logs,
-    };
+    })
+}
 
+pub fn export_backup_json(conn: &Connection) -> AppResult<String> {
+    let payload = build_backup_payload(conn)?;
     serde_json::to_string_pretty(&payload)
         .map_err(|e| AppError::Internal(format!("Lỗi tạo JSON backup: {e}")))
+}
+
+pub fn export_backup_gzip(conn: &Connection) -> AppResult<Vec<u8>> {
+    let payload = build_backup_payload(conn)?;
+    let compact = serde_json::to_vec(&payload)
+        .map_err(|e| AppError::Internal(format!("Lỗi tạo JSON backup: {e}")))?;
+    let mut encoder = GzEncoder::new(Vec::new(), Compression::default());
+    encoder
+        .write_all(&compact)
+        .map_err(|e| AppError::Internal(format!("Lỗi nén backup gzip: {e}")))?;
+    encoder
+        .finish()
+        .map_err(|e| AppError::Internal(format!("Lỗi hoàn tất nén gzip: {e}")))
+}
+
+pub fn import_backup_bytes(conn: &mut Connection, data: &[u8]) -> AppResult<BackupRestoreReport> {
+    if data.starts_with(&[0x1f, 0x8b]) {
+        let mut decoder = GzDecoder::new(data);
+        let mut json_str = String::new();
+        decoder
+            .read_to_string(&mut json_str)
+            .map_err(|e| AppError::Validation(format!("File backup gzip không hợp lệ: {e}")))?;
+        import_backup_json(conn, &json_str)
+    } else {
+        let json_str = std::str::from_utf8(data)
+            .map_err(|e| AppError::Validation(format!("File backup UTF-8 không hợp lệ: {e}")))?;
+        import_backup_json(conn, json_str)
+    }
 }
 
 pub fn import_backup_json(conn: &mut Connection, json_str: &str) -> AppResult<BackupRestoreReport> {
@@ -301,6 +337,51 @@ mod tests {
             webdav_file_url("https://dav.example.com/my-backup.json").expect("file url"),
             "https://dav.example.com/my-backup.json"
         );
+    }
+
+    #[test]
+    fn backup_gzip_export_and_import_roundtrip() {
+        let mut src = open_in_memory_for_test();
+        let deck = create_deck(
+            &src,
+            CreateDeckInput {
+                name: "GzipDeck".into(),
+                description: Some("Compressed backup test".into()),
+                new_cards_per_day: None,
+                desired_retention: None,
+            },
+        )
+        .expect("deck");
+        for i in 0..10 {
+            create_note(
+                &mut src,
+                CreateNoteInput {
+                    deck_id: deck.id.clone(),
+                    note_type: "vocab".into(),
+                    word: format!("word_{i}"),
+                    ipa: Some("/wɜːd/".into()),
+                    meaning: "từ vựng mẫu để kiểm tra nén gzip".into(),
+                    example_sentence: Some("This is an example sentence for gzip testing.".into()),
+                    collocations: None,
+                    tags: None,
+                },
+            )
+            .expect("note");
+        }
+
+        let pretty = export_backup_json(&src).expect("pretty");
+        let gzipped = export_backup_gzip(&src).expect("gzip");
+        assert!(gzipped.starts_with(&[0x1f, 0x8b]));
+        assert!(gzipped.len() < pretty.len());
+
+        let mut dst = open_in_memory_for_test();
+        let rep = import_backup_bytes(&mut dst, &gzipped).expect("import gzip");
+        assert_eq!(rep.decks, 1);
+        assert_eq!(rep.notes, 10);
+
+        let mut dst2 = open_in_memory_for_test();
+        let rep2 = import_backup_bytes(&mut dst2, pretty.as_bytes()).expect("import plain");
+        assert_eq!(rep2.notes, 10);
     }
 
     #[test]
