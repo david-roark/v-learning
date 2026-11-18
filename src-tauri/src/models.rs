@@ -260,6 +260,40 @@ pub struct BackupRestoreReport {
     pub review_logs: i64,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct GoogleDriveSettings {
+    pub client_id: String,
+    pub client_secret: String,
+    pub access_token: String,
+    pub refresh_token: String,
+    pub expires_at: i64,
+    pub user_email: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GoogleDriveStatus {
+    pub connected: bool,
+    pub user_email: String,
+    pub client_id: String,
+    pub has_client_secret: bool,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GoogleOAuthStart {
+    pub auth_url: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GoogleDriveBackupInfo {
+    pub exists: bool,
+    pub modified_time: Option<String>,
+    pub size_bytes: Option<u64>,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TtsSettings {

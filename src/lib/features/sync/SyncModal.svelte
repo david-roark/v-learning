@@ -1,5 +1,7 @@
 <script lang="ts">
-  import { CloudDownload, CloudUpload, Download, Upload, X } from "@lucide/svelte";
+  import { openUrl } from "@tauri-apps/plugin-opener";
+  import { CloudDownload, CloudUpload, Download, LogIn, LogOut, Upload, X } from "@lucide/svelte";
+  import type { GoogleDriveBackupInfo } from "$lib/shared/types";
   import { syncApi } from "./api";
 
   interface Props {
@@ -13,9 +15,42 @@
   let url = $state("");
   let username = $state("");
   let password = $state("");
+  let gdriveConnected = $state(false);
+  let gdriveEmail = $state("");
+  let gdriveClientId = $state("");
+  let gdriveClientSecret = $state("");
+  let showGdriveConfig = $state(false);
+  let gdriveLoggingIn = $state(false);
+  let gdriveBackupInfo = $state<GoogleDriveBackupInfo | null>(null);
+  let loadingBackupInfo = $state(false);
   let busy = $state(false);
   let msg = $state("");
   let error = $state("");
+
+  async function refreshGoogleBackupInfo() {
+    loadingBackupInfo = true;
+    try {
+      gdriveBackupInfo = await syncApi.getGoogleDriveBackupInfo();
+    } catch {
+      gdriveBackupInfo = null;
+    } finally {
+      loadingBackupInfo = false;
+    }
+  }
+
+  function formatBytes(bytes: number | null): string {
+    if (bytes === null) return "";
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+  }
+
+  function formatBackupTime(iso: string | null): string {
+    if (!iso) return "";
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return iso;
+    return d.toLocaleString("vi-VN");
+  }
 
   $effect(() => {
     if (open) {
@@ -26,8 +61,103 @@
         username = s.username;
         password = s.password;
       });
+      void syncApi.getGoogleDriveStatus().then((st) => {
+        gdriveConnected = st.connected;
+        gdriveEmail = st.userEmail;
+        gdriveClientId = st.clientId;
+        showGdriveConfig = !st.clientId;
+        if (st.connected) {
+          void refreshGoogleBackupInfo();
+        } else {
+          gdriveBackupInfo = null;
+        }
+      });
+    } else if (gdriveLoggingIn) {
+      gdriveLoggingIn = false;
+      busy = false;
+      void syncApi.cancelGoogleDriveLogin();
     }
   });
+
+  async function handleGoogleLogin() {
+    busy = true;
+    gdriveLoggingIn = true;
+    error = "";
+    msg = "";
+    try {
+      const { authUrl } = await syncApi.startGoogleDriveLogin(gdriveClientId, gdriveClientSecret);
+      await openUrl(authUrl);
+      const st = await syncApi.completeGoogleDriveLogin();
+      gdriveConnected = st.connected;
+      gdriveEmail = st.userEmail;
+      gdriveClientId = st.clientId;
+      gdriveClientSecret = "";
+      showGdriveConfig = false;
+      msg = st.userEmail
+        ? `Đã kết nối Google Drive (${st.userEmail}).`
+        : "Đã kết nối Google Drive.";
+      void refreshGoogleBackupInfo();
+    } catch (e) {
+      void syncApi.cancelGoogleDriveLogin();
+      error = String(e);
+    } finally {
+      gdriveLoggingIn = false;
+      busy = false;
+    }
+  }
+
+  async function handleCancelGoogleLogin() {
+    await syncApi.cancelGoogleDriveLogin();
+    gdriveLoggingIn = false;
+    busy = false;
+  }
+
+  async function handleGoogleLogout() {
+    busy = true;
+    error = "";
+    msg = "";
+    try {
+      const st = await syncApi.logoutGoogleDrive();
+      gdriveConnected = st.connected;
+      gdriveEmail = st.userEmail;
+      gdriveBackupInfo = null;
+      msg = "Đã đăng xuất Google Drive.";
+    } catch (e) {
+      error = String(e);
+    } finally {
+      busy = false;
+    }
+  }
+
+  async function handleGooglePush() {
+    busy = true;
+    error = "";
+    msg = "";
+    try {
+      await syncApi.pushGoogleDrive();
+      msg = "Đã sao lưu dữ liệu lên Google Drive thành công!";
+      void refreshGoogleBackupInfo();
+    } catch (e) {
+      error = String(e);
+    } finally {
+      busy = false;
+    }
+  }
+
+  async function handleGooglePull() {
+    busy = true;
+    error = "";
+    msg = "";
+    try {
+      const report = await syncApi.pullGoogleDrive();
+      msg = `Đã khôi phục từ Google Drive: ${report.decks} bộ thẻ, ${report.notes} ghi chú.`;
+      onRestored();
+    } catch (e) {
+      error = String(e);
+    } finally {
+      busy = false;
+    }
+  }
 
   async function handleExportJson() {
     busy = true;
@@ -100,9 +230,13 @@
 
 {#if open}
   <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-xs">
-    <div class="w-full max-w-lg rounded-2xl border border-zinc-800 bg-zinc-900 p-6 shadow-2xl">
+    <div
+      class="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-zinc-800 bg-zinc-900 p-6 shadow-2xl"
+    >
       <div class="mb-5 flex items-center justify-between">
-        <h2 class="text-base font-semibold text-white">Sao lưu & Đồng bộ (Local / WebDAV)</h2>
+        <h2 class="text-base font-semibold text-white">
+          Sao lưu & Đồng bộ (Google Drive / Local / WebDAV)
+        </h2>
         <button
           type="button"
           onclick={onClose}
@@ -113,6 +247,122 @@
       </div>
 
       <div class="space-y-5">
+        <!-- Google Drive Sync -->
+        <div class="space-y-3 rounded-xl border border-zinc-800 bg-zinc-950/60 p-4">
+          <div class="flex items-center justify-between gap-2">
+            <div>
+              <h3 class="text-xs font-semibold text-zinc-200 uppercase">Google Drive (App Data)</h3>
+              <p class="mt-0.5 text-[11px] text-zinc-400">
+                {#if gdriveConnected}
+                  Đã kết nối: <span class="text-emerald-400">{gdriveEmail || "Google Account"}</span
+                  >
+                {:else}
+                  Lưu riêng tư trong Google Drive của bạn (miễn phí).
+                {/if}
+              </p>
+              {#if gdriveConnected}
+                <p class="mt-0.5 text-[11px] text-zinc-400">
+                  {#if loadingBackupInfo}
+                    Đang kiểm tra bản sao lưu trên Drive...
+                  {:else if gdriveBackupInfo?.exists}
+                    Bản sao lưu trên Drive:
+                    <span class="text-zinc-200"
+                      >{formatBackupTime(gdriveBackupInfo.modifiedTime)}</span
+                    >
+                    {#if gdriveBackupInfo.sizeBytes !== null}
+                      <span> ({formatBytes(gdriveBackupInfo.sizeBytes)})</span>
+                    {/if}
+                  {:else if gdriveBackupInfo}
+                    Chưa có bản sao lưu nào trên Google Drive.
+                  {/if}
+                </p>
+              {/if}
+            </div>
+            <button
+              type="button"
+              onclick={() => (showGdriveConfig = !showGdriveConfig)}
+              class="text-[11px] text-zinc-400 underline hover:text-zinc-200"
+            >
+              {showGdriveConfig ? "Ẩn OAuth ID" : "Cấu hình OAuth"}
+            </button>
+          </div>
+
+          {#if showGdriveConfig}
+            <div class="space-y-2">
+              <input
+                type="text"
+                bind:value={gdriveClientId}
+                placeholder="Google OAuth Client ID (Desktop App)"
+                class="w-full rounded-xl border border-zinc-700 bg-zinc-900 px-3 py-2 text-xs text-zinc-100 focus:border-indigo-500 focus:outline-none"
+              />
+              <input
+                type="password"
+                bind:value={gdriveClientSecret}
+                placeholder="Client Secret (tuỳ chọn cho Desktop OAuth)"
+                class="w-full rounded-xl border border-zinc-700 bg-zinc-900 px-3 py-2 text-xs text-zinc-100 focus:border-indigo-500 focus:outline-none"
+              />
+            </div>
+          {/if}
+
+          {#if gdriveConnected}
+            <div class="flex flex-wrap gap-2.5 pt-1">
+              <button
+                type="button"
+                disabled={busy}
+                onclick={handleGooglePush}
+                class="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-indigo-500/40 bg-indigo-500/15 py-2 text-xs font-medium text-indigo-300 hover:bg-indigo-500/25 disabled:opacity-50"
+              >
+                <CloudUpload class="h-3.5 w-3.5" />
+                Sao lưu lên Drive
+              </button>
+              <button
+                type="button"
+                disabled={busy}
+                onclick={handleGooglePull}
+                class="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-emerald-500/40 bg-emerald-500/15 py-2 text-xs font-medium text-emerald-300 hover:bg-emerald-500/25 disabled:opacity-50"
+              >
+                <CloudDownload class="h-3.5 w-3.5" />
+                Khôi phục từ Drive
+              </button>
+              <button
+                type="button"
+                disabled={busy}
+                onclick={handleGoogleLogout}
+                class="inline-flex items-center justify-center gap-1.5 rounded-xl border border-zinc-700 px-3 py-2 text-xs font-medium text-zinc-300 hover:bg-zinc-800 disabled:opacity-50"
+              >
+                <LogOut class="h-3.5 w-3.5" />
+                Đăng xuất
+              </button>
+            </div>
+          {:else if gdriveLoggingIn}
+            <div class="flex gap-2.5">
+              <div
+                class="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-white/80 px-4 py-2 text-xs font-semibold text-zinc-900"
+              >
+                <LogIn class="h-3.5 w-3.5" />
+                Đang chờ xác thực trình duyệt...
+              </div>
+              <button
+                type="button"
+                onclick={handleCancelGoogleLogin}
+                class="inline-flex items-center justify-center rounded-xl border border-zinc-700 px-3.5 py-2 text-xs font-medium text-zinc-300 hover:bg-zinc-800"
+              >
+                Hủy
+              </button>
+            </div>
+          {:else}
+            <button
+              type="button"
+              disabled={busy}
+              onclick={handleGoogleLogin}
+              class="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-white px-4 py-2 text-xs font-semibold text-zinc-900 hover:bg-zinc-100 disabled:opacity-50"
+            >
+              <LogIn class="h-3.5 w-3.5" />
+              Đăng nhập với Google
+            </button>
+          {/if}
+        </div>
+
         <!-- Local Backup -->
         <div class="rounded-xl border border-zinc-800 bg-zinc-950/60 p-4">
           <h3 class="text-xs font-semibold text-zinc-200 uppercase">Sao lưu cục bộ (JSON)</h3>

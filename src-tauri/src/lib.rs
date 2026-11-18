@@ -31,6 +31,7 @@ pub fn run() {
             app.manage(db_state);
             let dict_pack_state = db::init_dict_pack_db(app.handle())?;
             app.manage(dict_pack_state);
+            app.manage(sync::gdrive::PendingGoogleOAuth::default());
             desktop::setup_desktop_features(app.handle())?;
             Ok(())
         })
@@ -74,6 +75,14 @@ pub fn run() {
             sync_cmd::save_webdav_settings,
             sync_cmd::sync_webdav_push,
             sync_cmd::sync_webdav_pull,
+            sync_cmd::google_drive_status,
+            sync_cmd::google_drive_start_login,
+            sync_cmd::google_drive_complete_login,
+            sync_cmd::google_drive_cancel_login,
+            sync_cmd::google_drive_logout,
+            sync_cmd::sync_google_drive_push,
+            sync_cmd::sync_google_drive_pull,
+            sync_cmd::google_drive_backup_info,
             reader_cmd::parse_epub,
             reader_cmd::load_reader_url,
         ])

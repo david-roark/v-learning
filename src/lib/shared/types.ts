@@ -148,6 +148,23 @@ export interface AiPracticeFeedback {
   feedback: string;
 }
 
+export interface GoogleDriveStatus {
+  connected: boolean;
+  userEmail: string;
+  clientId: string;
+  hasClientSecret: boolean;
+}
+
+export interface GoogleOAuthStart {
+  authUrl: string;
+}
+
+export interface GoogleDriveBackupInfo {
+  exists: boolean;
+  modifiedTime: string | null;
+  sizeBytes: number | null;
+}
+
 export interface ApkgImportReport {
   deckId: string;
   deckName: string;

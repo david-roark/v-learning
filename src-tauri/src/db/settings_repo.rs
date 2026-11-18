@@ -1,7 +1,7 @@
 use rusqlite::{Connection, OptionalExtension, params};
 
 use crate::error::AppResult;
-use crate::models::{AiSettings, TtsSettings, WebDavSettings};
+use crate::models::{AiSettings, GoogleDriveSettings, TtsSettings, WebDavSettings};
 
 fn get_key(conn: &Connection, key: &str) -> AppResult<Option<String>> {
     let val = conn
@@ -97,6 +97,38 @@ pub fn save_tts_settings(conn: &Connection, settings: &TtsSettings) -> AppResult
     Ok(())
 }
 
+pub fn get_google_drive_settings(conn: &Connection) -> AppResult<GoogleDriveSettings> {
+    let client_id = get_key(conn, "gdrive_client_id")?.unwrap_or_default();
+    let client_secret = get_key(conn, "gdrive_client_secret")?.unwrap_or_default();
+    let access_token = get_key(conn, "gdrive_access_token")?.unwrap_or_default();
+    let refresh_token = get_key(conn, "gdrive_refresh_token")?.unwrap_or_default();
+    let expires_at = get_key(conn, "gdrive_expires_at")?
+        .and_then(|v| v.parse::<i64>().ok())
+        .unwrap_or(0);
+    let user_email = get_key(conn, "gdrive_user_email")?.unwrap_or_default();
+    Ok(GoogleDriveSettings {
+        client_id,
+        client_secret,
+        access_token,
+        refresh_token,
+        expires_at,
+        user_email,
+    })
+}
+
+pub fn save_google_drive_settings(
+    conn: &Connection,
+    settings: &GoogleDriveSettings,
+) -> AppResult<()> {
+    set_key(conn, "gdrive_client_id", settings.client_id.trim())?;
+    set_key(conn, "gdrive_client_secret", settings.client_secret.trim())?;
+    set_key(conn, "gdrive_access_token", settings.access_token.trim())?;
+    set_key(conn, "gdrive_refresh_token", settings.refresh_token.trim())?;
+    set_key(conn, "gdrive_expires_at", &settings.expires_at.to_string())?;
+    set_key(conn, "gdrive_user_email", settings.user_email.trim())?;
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -180,5 +212,35 @@ mod tests {
         assert_eq!(loaded.url, "https://dav.example.com/files/");
         assert_eq!(loaded.username, "alice");
         assert_eq!(loaded.password, "secret");
+    }
+
+    #[test]
+    fn google_drive_settings_defaults_and_roundtrip() {
+        let conn = open_in_memory_for_test();
+        let defaults = get_google_drive_settings(&conn).expect("defaults");
+        assert!(defaults.client_id.is_empty());
+        assert!(defaults.refresh_token.is_empty());
+        assert_eq!(defaults.expires_at, 0);
+
+        save_google_drive_settings(
+            &conn,
+            &GoogleDriveSettings {
+                client_id: " 123.apps.googleusercontent.com ".into(),
+                client_secret: " sec ".into(),
+                access_token: " ya29.abc ".into(),
+                refresh_token: " 1//0gxyz ".into(),
+                expires_at: 1_750_000_000,
+                user_email: " user@example.com ".into(),
+            },
+        )
+        .expect("save gdrive");
+
+        let loaded = get_google_drive_settings(&conn).expect("loaded");
+        assert_eq!(loaded.client_id, "123.apps.googleusercontent.com");
+        assert_eq!(loaded.client_secret, "sec");
+        assert_eq!(loaded.access_token, "ya29.abc");
+        assert_eq!(loaded.refresh_token, "1//0gxyz");
+        assert_eq!(loaded.expires_at, 1_750_000_000);
+        assert_eq!(loaded.user_email, "user@example.com");
     }
 }
